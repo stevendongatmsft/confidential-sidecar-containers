@@ -109,7 +109,7 @@ This is a file inside the filesystem.
 
 ## Step by step example 
 
-Here is an example of running encfs sidecar on confidential ACI. In this example, the MAA endpoint is `sharedeus2.eus2.test.attest.azure.net`. The used managed HSM instance is `accmhsm.managedhsm.azure.net`.  
+Here is an example of running encfs sidecar on confidential ACI. In this example, the MAA endpoint is `sharedeus2.eus2.test.attest.azure.net`. The managed HSM instance is `accmhsm.managedhsm.azure.net`.  
 
 We are using the following ARM template for this sample: 
 
@@ -307,12 +307,12 @@ Fill in the keyimportconfig.json file with all the information. See the followin
 ```
 {
     "key": {
-        "kid": "doc-sample-key-release",  <- This is the key name you will import your key into mHSM. SkrClientKID on ARM template.
+        "kid": "doc-sample-key-release",  <- This is the key name you will import your key into mHSM. 
         "authority": {
-            "endpoint": "sharedeus2.eus2.test.attest.azure.net" <- MAA endpoint. SkrClientMAAEndpoint on ARM template
+            "endpoint": "sharedeus2.eus2.test.attest.azure.net" <- MAA endpoint. 
         },
         "mhsm": {
-            "endpoint": "accmhsm.managedhsm.azure.net", <- mHSM endpoint. SkrClientAKVEndpoint on ARM template
+            "endpoint": "accmhsm.managedhsm.azure.net", <- mHSM endpoint.
             "api_version": "api-version=7.3-preview",
             "bearer_token": "eyJ***6qlA" <- AAD token obtained above
         }
