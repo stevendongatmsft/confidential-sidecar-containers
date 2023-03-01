@@ -109,7 +109,7 @@ This is a file inside the filesystem.
 
 ```
 
-## Step by step example 
+### Step by step example 
 
 Here is an example of running encfs sidecar on confidential ACI. In this example, the MAA endpoint is `sharedeus2.eus2.test.attest.azure.net`. The managed HSM instance is `accmhsm.managedhsm.azure.net`.  
 
