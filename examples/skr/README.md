@@ -8,6 +8,12 @@ In our confidential container group example, we will deploy the skr sidecar alon
 
 ## Preparation
 
+- [Managed identity](#managed-identity)
+- [Policy generation](#policy-generation)
+- [Import key](#import-key)
+- [Deployment](#deployment)
+- [Step by step example](#step-by-step-example)
+
 ### Managed identity
 The user needs to generate a user-assigned managed idenity which will be attached to the container group so that the containers can have the right access permissions to Azure services and resources. More information about creating identities can be found [here.](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/)
 
@@ -44,51 +50,211 @@ Once the `importkeyconfig.json` is updated, execute the following command:
 ### Deployment
 The `aci-arm-template.json` provides an ARM template which can be parametrized using the security policy obtained above, the registry name (and credentials if private), the user-assigned managed identity, and the URIs to the endpoints required by the sidecar and test containers, discussed above.
 
+### Step by step example 
+Here is an example of running skr sidecar on confidential ACI. In this example, the MAA endpoint is `sharedeus2.eus2.test.attest.azure.net`. The managed HSM instance is `accmhsm.managedhsm.azure.net`.  
 
-Let us see an example of running SKR containers on confidential ACI. In this example, the MAA endpoint used is sharedeus2.eus2.test.attest.azure.net. The used managed HSM instance endpoint is accmhsm.managedhsm.azure.net.  
+We are using the following ARM template for this sample: 
+```
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "containerGroupName": {
+      "defaultValue": "aciSKRSidecarTest",
+      "type": "String",
+      "metadata": {
+        "description": "Secure Key Release Sidecar Example"
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.ContainerInstance/containerGroups",
+      "apiVersion": "2022-10-01-preview",
+      "name": "[parameters('containerGroupName')]",
+      "location": "[resourceGroup().location]",
+      "identity": {
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "/subscriptions/***/resourceGroups/resourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/myIdentity": {}
+        }
+      },
+      "properties": {
+        "containers": [
+          {
+            "name": "skr-sidecar-container",
+            "properties": {
+              "command": [
+                "/skr.sh"
+              ],
+              "image": "mcr.microsoft.com/aci/skr:main_20230216.1",
+              "resources": {
+                "requests": {
+                  "cpu": 1,
+                  "memoryInGB": 2
+                }
+              },
+              "ports": [
+                {
+                  "port": 8080
+                }
+              ]
+            }
+          },
+          {
+            "name": "test-skr-client-container",
+            "properties": {
+              "command": [
+                "/tests/skr_client.sh"
+              ],
+              "environmentVariables": [
+                {
+                  "name": "SkrClientMAAEndpoint",
+                  "value": "<authority-of-key-imported-to-key-vault>"
+                },
+                {
+                  "name": "SkrClientAKVEndpoint",
+                  "value": "<key-vault-endpoint>"
+                },
+                {
+                  "name": "SkrClientKID",
+                  "value": "<key-vault-key-identifier>"
+                }
+              ],
+              "image": "mcr.microsoft.com/aci/skr:main_20230216.1",
+              "resources": {
+                "requests": {
+                  "cpu": 0.5,
+                  "memoryInGB": 1
+                }
+              }
+            }
+          },
+          {
+            "name": "test-attest-client-container",
+            "properties": {
+              "command": [
+                "/tests/attest_client.sh"
+              ],
+              "environmentVariables": [
+                {
+                  "name": "AttestClientRuntimeData",
+                  "value": "eyJrZXlzIjpbeyJlIjoiQVFBQiIsImtleV9vcHMiOlsiZW5jcnlwdCJdLCJraWQiOiJOdmhmdXEyY0NJT0FCOFhSNFhpOVByME5QXzlDZU16V1FHdFdfSEFMel93Iiwia3R5IjoiUlNBIiwibiI6InY5NjVTUm15cDh6Ykc1ZU5GdURDbW1pU2VhSHB1akcyYkNfa2VMU3V6dkRNTE8xV3lyVUp2ZWFhNWJ6TW9PMHBBNDZwWGttYnFIaXNvelZ6cGlORExDbzZkM3o0VHJHTWVGUGYyQVBJTXUtUlNyek41NnF2SFZ5SXI1Y2FXZkhXay1GTVJEd0FlZnlOWVJIa2RZWWtnbUZLNDRoaFVkdGxDQUtFdjVVUXBGWmp2aDRpSTlqVkJkR1lNeUJhS1FMaGpJNVdJaC1RRzZaYTVzU3VPQ0ZNbm11eXV2TjVEZmxwTEZ6NTk1U3MtRW9CSVktTmlsNmxDdHZjR2dSLUlialVZSEFPczVhamFtVHpnZU84a3gzVkNFOUhjeUtteVVac2l5aUY2SURScDJCcHkzTkhUakl6N3Rta3BUSHg3dEhuUnRsZkUyRlV2MEI2aV9RWWxfWkE1USJ9XX0="
+                }
+              ],
+              "image": "mcr.microsoft.com/aci/skr:main_20230216.1",
+              "resources": {
+                "requests": {
+                  "cpu": 0.5,
+                  "memoryInGB": 1
+                }
+              }
+            }
+          },
+          {
+            "name": "test-attest-maa-client-container",
+            "properties": {
+              "command": [
+                "/tests/attest_client.sh"
+              ],
+              "environmentVariables": [
+                {
+                  "name": "AttestClientMAAEndpoint",
+                  "value": "<maa-endpoint>"
+                },
+                {
+                  "name": "AttestClientRuntimeData",
+                  "value": "eyJrZXlzIjpbeyJlIjoiQVFBQiIsImtleV9vcHMiOlsiZW5jcnlwdCJdLCJraWQiOiJOdmhmdXEyY0NJT0FCOFhSNFhpOVByME5QXzlDZU16V1FHdFdfSEFMel93Iiwia3R5IjoiUlNBIiwibiI6InY5NjVTUm15cDh6Ykc1ZU5GdURDbW1pU2VhSHB1akcyYkNfa2VMU3V6dkRNTE8xV3lyVUp2ZWFhNWJ6TW9PMHBBNDZwWGttYnFIaXNvelZ6cGlORExDbzZkM3o0VHJHTWVGUGYyQVBJTXUtUlNyek41NnF2SFZ5SXI1Y2FXZkhXay1GTVJEd0FlZnlOWVJIa2RZWWtnbUZLNDRoaFVkdGxDQUtFdjVVUXBGWmp2aDRpSTlqVkJkR1lNeUJhS1FMaGpJNVdJaC1RRzZaYTVzU3VPQ0ZNbm11eXV2TjVEZmxwTEZ6NTk1U3MtRW9CSVktTmlsNmxDdHZjR2dSLUlialVZSEFPczVhamFtVHpnZU84a3gzVkNFOUhjeUtteVVac2l5aUY2SURScDJCcHkzTkhUakl6N3Rta3BUSHg3dEhuUnRsZkUyRlV2MEI2aV9RWWxfWkE1USJ9XX0="
+                }
+              ],
+              "image": "mcr.microsoft.com/aci/skr:main_20230216.1",
+              "resources": {
+                "requests": {
+                  "cpu": 1,
+                  "memoryInGB": 1
+                }
+              }
+            }
+          }
+        ],
+        "imageRegistryCredentials": [
+          {
+            "server": "sampleprivateregistry.azurecr.io",
+            "identity": ""
+          }
+        ],
+        "osType": "Linux",
+        "ipAddress": {
+          "type": "Public",
+          "ports": [
+            {
+              "protocol": "tcp",
+              "port": 8080
+            }
+          ]
+        },
+        "sku": "confidential",
+        "confidentialComputeProperties": {
+          "ccePolicy": "<base64-std-encoded-string-of-policy>"
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "containerIPv4Address": {
+      "type": "String",
+      "value": "[reference(resourceId('Microsoft.ContainerInstance/containerGroups/', parameters('containerGroupName'))).ipAddress.ip]"
+    }
+  }
+}
+```
 
-Update the ARM template with a managed identity that has the following role based access: 
+**Preparation**: 
 
-*Key Vault Crypto Officer* and *Key Vault Crypto User* roles if using AKV
-*Managed HSM Crypto Officer* and *Managed HSM Crypto User* roles for /keys. 
+Update the following ARM template managed identity portion that has the correct role based access. *Key Vault Crypto Officer* and *Key Vault Crypto User* roles if using AKV and *Managed HSM Crypto Officer* and *Managed HSM Crypto User* roles for /keys if using managed HSM. Follow [Managed identity](#managed-identity) for detailed instruction. 
 
-insert picture 
+```
+"identity": {
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "/subscriptions/***/resourceGroups/resourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/myIdentity": {}
+        }
+},
+```
 
-Update the following on the ARM template. If you are using a private image, you should also update the following with a managed identity that has access to the private container registry. In our case, you do not need this section because we are using a public image. 
+Update the imageRegistryCredentials on the ARM template in order to access the private container registry. In our case, you do not need this section because we are using a public image. 
 
+```
 "imageRegistryCredentials": [
           {
-            "server": "parmaregistry.azurecr.io",
+            "server": "sampleprivateregistry.azurecr.io",
             "identity": ""
           }
 ],
+```
 
-this belongs to encfs 
-You should also have the Reader and Storage Blob Reader/Contributor roles to the storage container on which the encrypted model image has been uploaded. 
-
-
+**Encfs sidecar argument**: 
 
 Run the following command to generate the security policy and make sure you include the `--deubg-mode` option so that the policy allows users to shell into the container. 
 
-    1az confcom acipolicygen -a aci-arm-template.json --debug-mode`
+    az confcom acipolicygen -a aci-arm-template.json --debug-mode
 
 
-Key import: 
+**Key import**: 
 
-git clone git@github.com:microsoft/confidential-sidecar-containers.git and in the tools folder, there are two tools that allow users to obtain the security hash of the generated policy and importing key into the key vault.
+    git clone git@github.com:microsoft/confidential-sidecar-containers.git
 
+Use the tools in this repository to obtain the security hash of the generated policy and to import key into the AKV/mHSM. Copy the value of the generated `ccePolicy` from the ARM template and obtain the security hash of the policy by running: 
 
-Copy the value of the generated `ccePolicy` poicy from the ARM template and obtain the security hash of the policy by running: 
-
-    `go run tools/securitypolicydigest/main.go -p ccePolicyValue`
+    go run tools/securitypolicydigest/main.go -p ccePolicyValue
 
 At the end of the command output, you should see something similar to the following: 
 
-inittimeData sha-256 digest **aaa4e****cc09d**
+    inittimeData sha-256 digest **aaa4e****cc09d**
 
-Obtain the AAD token with the following command 
+Obtain the AAD token: 
 
-    `az account get-access-token --resource https://managedhsm.azure.net`
+    az account get-access-token --resource https://managedhsm.azure.net
 
 Fill in the keyimportconfig.json file with the above information. See the following as an example: 
 
@@ -126,7 +292,7 @@ Fill in the keyimportconfig.json file with the above information. See the follow
 
 Import the key into mHSM with the following command. I'm using a fake encryption key here because I just want to see the key gets released. 
 
-go run /tools/importkey/main.go -c keyimportconfig.json -kh encryptionKey
+    go run /tools/importkey/main.go -c keyimportconfig.json -kh encryptionKey
 
 Upon successful import completion, you should see something similar to the following: 
 
@@ -134,10 +300,12 @@ Upon successful import completion, you should see something similar to the follo
 https://accmhsm.managedhsm.azure.net/keys/doc-sample-key-release/8659****0cdff08
 {"version":"0.2","anyOf":[{"authority":"https://sharedeus2.eus2.test.attest.azure.net","allOf":[{"claim":"x-ms-sevsnpvm-hostdata","equals":"aaa7***7cc09d"},{"claim":"x-ms-compliance-status","equals":"azure-compliant-uvm"},{"claim":"x-ms-sevsnpvm-is-debuggable","equals":"false"}]}]}
 
-Deployment: 
+**Deployment**: 
 
-Make sure the ccePolicy is not blank and deploy confidential ACI in your preferred way. I'm deploying using Azure portal. To verify the key has been successful released, shell into the `skr-sidecar-container` container and see the log.txt and you should see the following log message: 
+Deploy and verify the key has been successful released, shell into the `skr-sidecar-container` container and see the log.txt and you should see the following log message: 
 
+```
 level=debug msg=Releasing key blob: {doc-sample-key-release}
+```
 
 Alternatively, you can shell into the container `test-skr-client-hsm-skr` and the released key is in keyrelease.out. 
