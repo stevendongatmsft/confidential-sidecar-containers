@@ -43,3 +43,101 @@ Once the `importkeyconfig.json` is updated, execute the following command:
 
 ### Deployment
 The `aci-arm-template.json` provides an ARM template which can be parametrized using the security policy obtained above, the registry name (and credentials if private), the user-assigned managed identity, and the URIs to the endpoints required by the sidecar and test containers, discussed above.
+
+
+Let us see an example of running SKR containers on confidential ACI. In this example, the MAA endpoint used is sharedeus2.eus2.test.attest.azure.net. The used managed HSM instance endpoint is accmhsm.managedhsm.azure.net.  
+
+Update the ARM template with a managed identity that has the following role based access: 
+
+*Key Vault Crypto Officer* and *Key Vault Crypto User* roles if using AKV
+*Managed HSM Crypto Officer* and *Managed HSM Crypto User* roles for /keys. 
+
+insert picture 
+
+Update the following on the ARM template. If you are using a private image, you should also update the following with a managed identity that has access to the private container registry. In our case, you do not need this section because we are using a public image. 
+
+"imageRegistryCredentials": [
+          {
+            "server": "parmaregistry.azurecr.io",
+            "identity": ""
+          }
+],
+
+this belongs to encfs 
+You should also have the Reader and Storage Blob Reader/Contributor roles to the storage container on which the encrypted model image has been uploaded. 
+
+
+
+Run the following command to generate the security policy and make sure you include the `--deubg-mode` option so that the policy allows users to shell into the container. 
+
+    1az confcom acipolicygen -a aci-arm-template.json --debug-mode`
+
+
+Key import: 
+
+git clone git@github.com:microsoft/confidential-sidecar-containers.git and in the tools folder, there are two tools that allow users to obtain the security hash of the generated policy and importing key into the key vault.
+
+
+Copy the value of the generated `ccePolicy` poicy from the ARM template and obtain the security hash of the policy by running: 
+
+    `go run tools/securitypolicydigest/main.go -p ccePolicyValue`
+
+At the end of the command output, you should see something similar to the following: 
+
+inittimeData sha-256 digest **aaa4e****cc09d**
+
+Obtain the AAD token with the following command 
+
+    `az account get-access-token --resource https://managedhsm.azure.net`
+
+Fill in the keyimportconfig.json file with the above information. See the following as an example: 
+
+```
+{
+    "key": {
+        "kid": "doc-sample-key-release",  **<- This is the key name you will import your key into mHSM. SkrClientKID on ARM template.**
+        "authority": {
+            "endpoint": "sharedeus2.eus2.test.attest.azure.net" **<- MAA endpoint. SkrClientMAAEndpoint on ARM template**
+        },
+        "mhsm": {
+            "endpoint": "accmhsm.managedhsm.azure.net", **<- mHSM endpoint. SkrClientAKVEndpoint on ARM template**
+            "api_version": "api-version=7.3-preview",
+            "bearer_token": "eyJ***6qlA" **<- AAD token obtained above**
+        }
+    },
+    "claims": [
+        [
+            {
+                "claim": "x-ms-sevsnpvm-hostdata",
+                "equals": "aaa4e****cc09d" **<- Security hash obtained above** 
+            },
+            {
+                "claim": "x-ms-compliance-status",
+                "equals": "azure-compliant-uvm"
+            },
+            {
+                "claim": "x-ms-sevsnpvm-is-debuggable",
+                "equals": "false"
+            }
+        ]
+    ]
+}
+```
+
+Import the key into mHSM with the following command. I'm using a fake encryption key here because I just want to see the key gets released. 
+
+go run /tools/importkey/main.go -c keyimportconfig.json -kh encryptionKey
+
+Upon successful import completion, you should see something similar to the following: 
+
+[34 71 33 117 113 25 191 84 199 236 137 166 201 103 83 20 203 233 66 236 121 110 223 2 122 99 106 20 22 212 49 224]
+https://accmhsm.managedhsm.azure.net/keys/doc-sample-key-release/8659****0cdff08
+{"version":"0.2","anyOf":[{"authority":"https://sharedeus2.eus2.test.attest.azure.net","allOf":[{"claim":"x-ms-sevsnpvm-hostdata","equals":"aaa7***7cc09d"},{"claim":"x-ms-compliance-status","equals":"azure-compliant-uvm"},{"claim":"x-ms-sevsnpvm-is-debuggable","equals":"false"}]}]}
+
+Deployment: 
+
+Make sure the ccePolicy is not blank and deploy confidential ACI in your preferred way. I'm deploying using Azure portal. To verify the key has been successful released, shell into the `skr-sidecar-container` container and see the log.txt and you should see the following log message: 
+
+level=debug msg=Releasing key blob: {doc-sample-key-release}
+
+Alternatively, you can shell into the container `test-skr-client-hsm-skr` and the released key is in keyrelease.out. 
