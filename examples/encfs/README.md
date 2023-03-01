@@ -9,7 +9,7 @@
   - [Deployment](#deployment)
 
 ## Step by step example
-  - [Step by step example](#step-by-step-example)
+  - [Step by step example](##step-by-step-example)
 
 
 ### Managed identity
