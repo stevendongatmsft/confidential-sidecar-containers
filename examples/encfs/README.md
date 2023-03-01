@@ -111,7 +111,132 @@ This is a file inside the filesystem.
 
 Here is an example of running encfs sidecar on confidential ACI. In this example, the MAA endpoint is `sharedeus2.eus2.test.attest.azure.net`. The used managed HSM instance is `accmhsm.managedhsm.azure.net`.  
 
-Please follow [Encrypted filesystem](#encrypted-filesystem) to generate and upload the encrypted file system to container storage as a page blob. Once done, update the following ARM template managed identity that has the correct role based access. *Key Vault Crypto Officer* and *Key Vault Crypto User* roles if using AKV and *Managed HSM Crypto Officer* and *Managed HSM Crypto User* roles for /keys. Follow [Managed identity](#managed-identity) for detailed instruction. The following identity should also have the Reader and Storage Blob Reader/Contributor roles to the storage container on which the encrypted model image has been uploaded. 
+We are using the following ARM template for this sample: 
+
+```
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "containerGroupName": {
+      "type": "string",
+      "defaultValue": "encfs-sample",
+      "metadata": {
+        "description": "Encrypted filesystem sidecar example"
+      }
+    }
+  },
+  "resources": [
+    {
+      "name": "[parameters('containerGroupName')]",
+      "type": "Microsoft.ContainerInstance/containerGroups",
+      "apiVersion": "2022-10-01-preview",
+      "location": "[resourceGroup().location]",
+      "identity": {
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "/subscriptions/***/resourceGroups/resourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/myIdentity": {}
+        }
+      },
+      "properties": {
+        "containers": [
+          {
+            "name": "encrypted-filesystem-sidecar-container",
+            "properties": {
+              "command": [
+                "/encfs.sh"
+              ],
+              "environmentVariables": [
+                {
+                  "name": "EncfsSideCarArgs",
+                  "value": "ewogICAgImF6dXJlX2ZpbGVzeXN0ZW1zIjogWwogICAgICAgIHsKICAgICAgICAgICAgIm1vdW50X3BvaW50IjogIi9tbnQvcmVtb3RlL3NoYXJlIiwKICAgICAgICAgICAgImF6dXJlX3VybCI6ICJodHRwczovL3Nkb25nbWxpbmZlcmVuY2VkZW1vLmJsb2IuY29yZS53aW5kb3dzLm5ldC9wcml2YXRlLWNvbnRhaW5lci9tb2RlbHMuaW1nIiwKICAgICAgICAgICAgImF6dXJlX3VybF9wcml2YXRlIjogdHJ1ZSwKICAgICAgICAgICAgImtleSI6IHsKICAgICAgICAgICAgICAgICJraWQiOiAiZW5jZnMtZG9jLXNhbXBsZS1rZXkxIiwKICAgICAgICAgICAgICAgICJhdXRob3JpdHkiOiB7CiAgICAgICAgICAgICAgICAgICAgImVuZHBvaW50IjogInNoYXJlZGV1czIuZXVzMi50ZXN0LmF0dGVzdC5henVyZS5uZXQiCiAgICAgICAgICAgICAgICB9LAogICAgICAgICAgICAgICAgImFrdiI6IHsKICAgICAgICAgICAgICAgICAgICAiZW5kcG9pbnQiOiAiYWNjbWhzbS5tYW5hZ2VkaHNtLmF6dXJlLm5ldCIKICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgfQogICAgICAgIH0KICAgIF0KfQ=="
+                }
+              ],
+              "image": "mcr.microsoft.com/aci/encfs:main_20230216.1",
+              "resources": {
+                "requests": {
+                  "cpu": 1,
+                  "memoryInGb": 2
+                }
+              },
+              "volumeMounts": [
+                {
+                  "name": "remotemounts",
+                  "mountPath": "/mnt/remote"
+                }
+              ]
+            }
+          },
+          {
+            "name": "test-encfs-container",
+            "properties": {
+              "command": [
+                "/bin/sh",
+                "-c",
+                "while true; do cat /mnt/remote/share/test.txt | /usr/bin/head -n 20; sleep 1; done"
+              ],
+              "image": "docker.io/alpine:3.17.1",
+              "resources": {
+                "requests": {
+                  "cpu": 0.5,
+                  "memoryInGb": 1
+                }
+              },
+              "volumeMounts": [
+                {
+                  "name": "remotemounts",
+                  "mountPath": "/mnt/remote"
+                }
+              ],
+              "ports": [
+                {
+                  "port": 8000
+                }
+              ]
+            }
+          }
+        ],
+        "imageRegistryCredentials": [
+          {
+            "server": "sampleprivateregistry.azurecr.io",
+            "identity": ""
+          }
+        ],
+        "osType": "Linux",
+        "ipAddress": {
+          "type": "Public",
+          "ports": [
+            {
+              "protocol": "tcp",
+              "port": 8000
+            }
+          ]
+        },
+        "sku": "confidential",
+        "confidentialComputeProperties": {
+          "ccePolicy": ""
+        },
+        "volumes": [
+          {
+            "name": "remotemounts",
+            "emptyDir": {}
+          }
+        ]
+      }
+    }
+  ],
+  "outputs": {
+    "containerIPv4Address": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.ContainerInstance/containerGroups/', parameters('containerGroupName'))).ipAddress.ip]"
+    }
+  }
+}
+```
+
+**Preparation**: 
+
+Please follow [Encrypted filesystem](#encrypted-filesystem) to generate and upload the encrypted file system to container storage as a page blob. Once done, update the following ARM template managed identity portion that has the correct role based access. *Key Vault Crypto Officer* and *Key Vault Crypto User* roles if using AKV and *Managed HSM Crypto Officer* and *Managed HSM Crypto User* roles for /keys if using managed HSM. Follow [Managed identity](#managed-identity) for detailed instruction. The same identity should also have the Reader and Storage Blob Reader/Contributor roles to the storage container on which the encrypted model image has been uploaded. 
 
 "identity": {
         "type": "UserAssigned",
@@ -125,7 +250,7 @@ Update the imageRegistryCredentials on the ARM template in order to access the p
 
 "imageRegistryCredentials": [
           {
-            "server": "parmaregistry.azurecr.io",
+            "server": "sampleprivateregistry.azurecr.io",
             "identity": ""
           }
 ],
@@ -152,11 +277,11 @@ Update the imageRegistryCredentials on the ARM template in order to access the p
     ]
 }
 ```
-The value of EncfsSideCarArgs env var on the ARM template should be the base64 encoding of the above encfs sidecar argument. 
+The value of `EncfsSideCarArgs` env var on the ARM template should be the base64 encoding of the encfs sidecar argument above. 
 
 **Generate security policy**: 
 
-Run the following command to generate the security policy and make sure you include the `--deubg-mode` option so that the policy allows users to shell into the container for debugging purposes. 
+Run the following command to generate the security policy and include the `--deubg-mode` option so that the security policy allows users to shell into the container for debugging purposes. 
 
     az confcom acipolicygen -a aci-arm-template.json --debug-mode
 
@@ -165,41 +290,38 @@ Run the following command to generate the security policy and make sure you incl
 
     git clone git@github.com:microsoft/confidential-sidecar-containers.git 
 
-In the tools folder, there are two tools that allow users to obtain the security hash of the generated policy and importing key into the key vault.
-
-
-Copy the value of the generated `ccePolicy` poicy from the ARM template and obtain the security hash of the policy by running: 
+Use the tools in this repository to obtain the security hash of the generated policy and to import key into the AKV/mHSM. Copy the value of the generated `ccePolicy` from the ARM template and obtain the security hash of the policy by running: 
 
     go run tools/securitypolicydigest/main.go -p ccePolicyValue
 
 At the end of the command output, you should see something similar to the following: 
 
-inittimeData sha-256 digest **aaa4e****cc09d**
+    inittimeData sha-256 digest **aaa4e****cc09d**
 
-Obtain the AAD token with the following command 
+Obtain the AAD token: 
 
     az account get-access-token --resource https://managedhsm.azure.net
 
-Fill in the keyimportconfig.json file with the above information. See the following as an example: 
+Fill in the keyimportconfig.json file with all the information. See the following as an example:
 
 ```
 {
     "key": {
-        "kid": "doc-sample-key-release",  **<- This is the key name you will import your key into mHSM. SkrClientKID on ARM template.**
+        "kid": "doc-sample-key-release",  <- This is the key name you will import your key into mHSM. SkrClientKID on ARM template.
         "authority": {
-            "endpoint": "sharedeus2.eus2.test.attest.azure.net" **<- MAA endpoint. SkrClientMAAEndpoint on ARM template**
+            "endpoint": "sharedeus2.eus2.test.attest.azure.net" <- MAA endpoint. SkrClientMAAEndpoint on ARM template
         },
         "mhsm": {
-            "endpoint": "accmhsm.managedhsm.azure.net", **<- mHSM endpoint. SkrClientAKVEndpoint on ARM template**
+            "endpoint": "accmhsm.managedhsm.azure.net", <- mHSM endpoint. SkrClientAKVEndpoint on ARM template
             "api_version": "api-version=7.3-preview",
-            "bearer_token": "eyJ***6qlA" **<- AAD token obtained above**
+            "bearer_token": "eyJ***6qlA" <- AAD token obtained above
         }
     },
     "claims": [
         [
             {
                 "claim": "x-ms-sevsnpvm-hostdata",
-                "equals": "aaa4e****cc09d" **<- Security hash obtained above** 
+                "equals": "aaa4e****cc09d" <- Security hash obtained above
             },
             {
                 "claim": "x-ms-compliance-status",
@@ -226,8 +348,4 @@ https://accmhsm.managedhsm.azure.net/keys/doc-sample-key-release/8659****0cdff08
 
 **Deployment**: 
 
-Make sure the ccePolicy is not blank and deploy confidential ACI in your preferred way. I'm deploying using Azure portal. To verify the key has been successful released, shell into the `skr-sidecar-container` container and see the log.txt and you should see the following log message: 
-
-level=debug msg=Releasing key blob: {doc-sample-key-release}
-
-Alternatively, you can shell into the container `test-skr-client-hsm-skr` and the released key is in keyrelease.out. 
+Start deployment and verify file system mounting. See [Deployment](#deployment) for detail.
