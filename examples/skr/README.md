@@ -110,15 +110,15 @@ We are using the following ARM template for this sample:
               "environmentVariables": [
                 {
                   "name": "SkrClientMAAEndpoint",
-                  "value": "<authority-of-key-imported-to-key-vault>"
+                  "value": "sharedeus2.eus2.test.attest.azure.net"
                 },
                 {
                   "name": "SkrClientAKVEndpoint",
-                  "value": "<key-vault-endpoint>"
+                  "value": "accmhsm.managedhsm.azure.net"
                 },
                 {
                   "name": "SkrClientKID",
-                  "value": "<key-vault-key-identifier>"
+                  "value": "doc-sample-key-release"
                 }
               ],
               "image": "mcr.microsoft.com/aci/skr:main_20230216.1",
@@ -160,7 +160,7 @@ We are using the following ARM template for this sample:
               "environmentVariables": [
                 {
                   "name": "AttestClientMAAEndpoint",
-                  "value": "<maa-endpoint>"
+                  "value": "sharedeus2.eus2.test.attest.azure.net"
                 },
                 {
                   "name": "AttestClientRuntimeData",
