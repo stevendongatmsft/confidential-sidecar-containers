@@ -1,13 +1,12 @@
 # Encrypted filesystem container example
 
 ## Preparation
-
-- [Managed identity](#managed-identity)
-- [Security policy generation](#security-policy-generation)
-- [Import encryption key](#import-encryption-key)
-- [Encrypted filesystem](#encrypted-filesystem)
-- [Testing](#testing)
-- [Deployment](#deployment)
+  - [Managed identity](#managed-identity)
+  - [Security policy generation](#security-policy-generation)
+  - [Import encryption key](#import-encryption-key)
+  - [Encrypted filesystem](#encrypted-filesystem)
+  - [Testing](#testing)
+  - [Deployment](#deployment)
 - [Step by step example](#step-by-step-example)
 
 ### Managed identity
