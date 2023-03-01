@@ -356,4 +356,4 @@ In this case, I use the following command to verify my key has been successfully
 
 **Deployment**: 
 
-Start deployment and verify file system mounting. See [Deployment](#deployment) for detail.
+Go to Azure portal and click on `deploy a custom template`, then click `Build your own template in the editor`. By this time, the `ccePolicy` field should have been generated and filled in the previous `az confcom acipolicygen` command. Copy and paste the ARM template into the field start a deployment. Once deployment is done, verify file system mounting. See [Deployment](#deployment) for detail.

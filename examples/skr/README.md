@@ -309,7 +309,7 @@ In this case, I use the following command to verify my key has been successfully
 
 **Deployment**: 
 
-Deploy and verify the key has been successful released, shell into the `skr-sidecar-container` container and see the log.txt and you should see the following log message: 
+Go to Azure portal and click on `deploy a custom template`, then click `Build your own template in the editor`. By this time, the `ccePolicy` field should have been generated and filled in the previous `az confcom acipolicygen` command. Copy and paste the ARM template into the field start a deployment. Once deployment is done, verify the key has been successful released, shell into the `skr-sidecar-container` container and see the log.txt and you should see the following log message: 
 
 ```
 level=debug msg=Releasing key blob: {doc-sample-key-release}
