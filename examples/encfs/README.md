@@ -256,20 +256,22 @@ Update the managed identity in the imageRegistryCredentials on the ARM template 
 
 **Encfs sidecar argument**: 
 
+Remove the comments after // to make it valid JSON.
+
 ```
 {
     "azure_filesystems": [
         {
-            "mount_point": "/mnt/remote/share4", <- User indicates the mount_point where the remote file system should be mounted 
-            "azure_url": "https://sdongmlinferencedemo.blob.core.windows.net/private-container/models.img", <- azure blob storage url for generated encryption file system
+            "mount_point": "/mnt/remote/share4", // User indicates the mount_point where the remote file system should be mounted 
+            "azure_url": "https://sdongmlinferencedemo.blob.core.windows.net/private-container/models.img", // azure blob storage url for generated encryption file system
             "azure_url_private": true,
             "key": {
-                "kid": "encfs-doc-sample-key", <- Imported encrytion key name in mHSM
+                "kid": "encfs-doc-sample-key", // Imported encrytion key name in mHSM
                 "authority": {
-                    "endpoint": "sharedeus2.eus2.test.attest.azure.net" <- MAA endpoint 
+                    "endpoint": "sharedeus2.eus2.test.attest.azure.net" // MAA endpoint 
                 },
                 "akv": {
-                    "endpoint": "accmhsm.managedhsm.azure.net" <- mHSM endpoint 
+                    "endpoint": "accmhsm.managedhsm.azure.net" // mHSM endpoint 
                 }
             }
         }
@@ -301,26 +303,26 @@ Obtain the AAD token:
 
     az account get-access-token --resource https://managedhsm.azure.net
 
-Fill in the keyimportconfig.json file with all the information. See the following as an example:
+Fill in the keyimportconfig.json file with all the information. See the following as an example. Remove the comments after // to make it valid JSON.
 
 ```
 {
     "key": {
-        "kid": "doc-sample-key-release",  <- This is the key name you will import your key into mHSM. 
+        "kid": "doc-sample-key-release",  // This is the key name you will import your key into mHSM. 
         "authority": {
-            "endpoint": "sharedeus2.eus2.test.attest.azure.net" <- MAA endpoint. 
+            "endpoint": "sharedeus2.eus2.test.attest.azure.net" // MAA endpoint. 
         },
         "mhsm": {
-            "endpoint": "accmhsm.managedhsm.azure.net", <- mHSM endpoint.
+            "endpoint": "accmhsm.managedhsm.azure.net", // mHSM endpoint.
             "api_version": "api-version=7.3-preview",
-            "bearer_token": "eyJ***6qlA" <- AAD token obtained above
+            "bearer_token": "eyJ***6qlA" // AAD token obtained above
         }
     },
     "claims": [
         [
             {
                 "claim": "x-ms-sevsnpvm-hostdata",
-                "equals": "aaa4e****cc09d" <- Security hash obtained above
+                "equals": "aaa4e****cc09d" // Security hash obtained above
             },
             {
                 "claim": "x-ms-compliance-status",

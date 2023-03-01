@@ -256,26 +256,26 @@ Obtain the AAD token:
 
     az account get-access-token --resource https://managedhsm.azure.net
 
-Fill in the keyimportconfig.json file with the above information. See the following as an example: 
+Fill in the keyimportconfig.json file with the above information. See the following as an example. Remove the comments after // to make it valid JSON. 
 
 ```
 {
     "key": {
-        "kid": "doc-sample-key-release",  <- This is the key name you will import your key into mHSM. SkrClientKID on ARM template.
+        "kid": "doc-sample-key-release",  //This is the key name you will import your key into mHSM. SkrClientKID on ARM template.
         "authority": {
-            "endpoint": "sharedeus2.eus2.test.attest.azure.net" <- MAA endpoint. SkrClientMAAEndpoint on ARM template
+            "endpoint": "sharedeus2.eus2.test.attest.azure.net" // MAA endpoint. SkrClientMAAEndpoint on ARM template
         },
         "mhsm": {
-            "endpoint": "accmhsm.managedhsm.azure.net", <- mHSM endpoint. SkrClientAKVEndpoint on ARM template
+            "endpoint": "accmhsm.managedhsm.azure.net", // mHSM endpoint. SkrClientAKVEndpoint on ARM template
             "api_version": "api-version=7.3-preview",
-            "bearer_token": "eyJ***6qlA" <- AAD token obtained above
+            "bearer_token": "eyJ***6qlA" // AAD token obtained above
         }
     },
     "claims": [
         [
             {
                 "claim": "x-ms-sevsnpvm-hostdata",
-                "equals": "aaa4e****cc09d" <- Security hash obtained above
+                "equals": "aaa4e****cc09d" // Security hash obtained above
             },
             {
                 "claim": "x-ms-compliance-status",
