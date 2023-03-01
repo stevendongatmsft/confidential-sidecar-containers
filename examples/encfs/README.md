@@ -1,16 +1,13 @@
 # Encrypted filesystem container example
 
-## Preparation
+## Table of Contents
   - [Managed identity](#managed-identity)
   - [Security policy generation](#security-policy-generation)
   - [Import encryption key](#import-encryption-key)
   - [Encrypted filesystem](#encrypted-filesystem)
   - [Testing](#testing)
   - [Deployment](#deployment)
-
-## Step by step example
   - [Step by step example](#step-by-step-example)
-
 
 ### Managed identity
 The user needs to generate a user-assigned managed idenity which will be attached to the container group so that the containers can have the right access permissions to Azure services and resources. More information about creating identities can be found [here.](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/)

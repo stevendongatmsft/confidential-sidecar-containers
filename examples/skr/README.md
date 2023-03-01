@@ -1,16 +1,18 @@
 # Attestation and Secure Key Release Sidecar Example
 
+## Table of Contents
+- [Managed identity](#managed-identity)
+- [Policy generation](#policy-generation)
+- [Import key](#import-key)
+- [Deployment](#deployment)
+- [Step by step example](#step-by-step-example)
+
 In our confidential container group example, we will deploy the skr sidecar along with a set of test containers that exercise and test the REST API.
 - **skr sidecar.** The sidecar’s entry point is /skr.sh which uses the SkrSideCarArgs environment variable to pass the certificate cache endpoint information.
 - **attest/raw test.** The sidecar’s entry point is /tests/attest_client.sh which uses the AttestClientRuntimeData environment variable to pass a blob whose sha-256 digest will be encoded in the raw attestation report as report_data.
 - **attest/maa test.** The sidecar’s entry point is /tests/attest_client.sh which uses two environment variables: (i) AttestClientMAAEndpoint passes the Microsoft Azure Attestation endpoint which will author the attestation token, (ii) AttestClientRuntimeData passes a blob whose sha-256 digest will be encoded in the attestation token as runtime claim.
 - **key/release test.** The sidecar’s entry point is /tests/skr_client.sh which uses the three environment variables: (i) SkrClientKID passes the key identifier of the key to be released from the key vault, (ii) SkrClientAKVEndpoint passes the key vault endpoint from which the key will be released, and (iii) SkrClientMAAEndpoint passes the Microsoft Azure Attestation endpoint shall author the attestation token required for releasing the secret. The MAA endpoint shall be the same as the one specified in the SKR policy during the key import to the key vault.
 
-- [Managed identity](#managed-identity)
-- [Policy generation](#policy-generation)
-- [Import key](#import-key)
-- [Deployment](#deployment)
-- [Step by step example](#step-by-step-example)
 
 ### Managed identity
 The user needs to generate a user-assigned managed idenity which will be attached to the container group so that the containers can have the right access permissions to Azure services and resources. More information about creating identities can be found [here.](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/)
