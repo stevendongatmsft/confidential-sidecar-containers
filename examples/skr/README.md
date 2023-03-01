@@ -211,7 +211,7 @@ We are using the following ARM template for this sample:
 
 **Preparation**: 
 
-Update the following ARM template managed identity portion that has the correct role based access. *Key Vault Crypto Officer* and *Key Vault Crypto User* roles if using AKV and *Managed HSM Crypto Officer* and *Managed HSM Crypto User* roles for /keys if using managed HSM. Follow [Managed identity](#managed-identity) for detailed instruction. 
+Update the following ARM template managed identity portion that has the correct role based access. The managed identity needs *Key Vault Crypto Officer* and *Key Vault Crypto User* roles if using AKV. *Managed HSM Crypto Officer* and *Managed HSM Crypto User* roles for /keys if using managed HSM. Follow [Managed identity](#managed-identity) for detailed instruction. 
 
 ```
 "identity": {
@@ -222,7 +222,7 @@ Update the following ARM template managed identity portion that has the correct 
 },
 ```
 
-Update the imageRegistryCredentials on the ARM template in order to access the private container registry. In our case, you do not need this section because we are using a public image. 
+Update the managed identity in imageRegistryCredentials on the ARM template in order to access the private container registry. In our case, you do not need this section because we are using a public image. 
 
 ```
 "imageRegistryCredentials": [
@@ -233,7 +233,7 @@ Update the imageRegistryCredentials on the ARM template in order to access the p
 ],
 ```
 
-**Encfs sidecar argument**: 
+**Generate security policy**: 
 
 Run the following command to generate the security policy and make sure you include the `--deubg-mode` option so that the policy allows users to shell into the container. 
 
@@ -261,21 +261,21 @@ Fill in the keyimportconfig.json file with the above information. See the follow
 ```
 {
     "key": {
-        "kid": "doc-sample-key-release",  **<- This is the key name you will import your key into mHSM. SkrClientKID on ARM template.**
+        "kid": "doc-sample-key-release",  <- This is the key name you will import your key into mHSM. SkrClientKID on ARM template.
         "authority": {
-            "endpoint": "sharedeus2.eus2.test.attest.azure.net" **<- MAA endpoint. SkrClientMAAEndpoint on ARM template**
+            "endpoint": "sharedeus2.eus2.test.attest.azure.net" <- MAA endpoint. SkrClientMAAEndpoint on ARM template
         },
         "mhsm": {
-            "endpoint": "accmhsm.managedhsm.azure.net", **<- mHSM endpoint. SkrClientAKVEndpoint on ARM template**
+            "endpoint": "accmhsm.managedhsm.azure.net", <- mHSM endpoint. SkrClientAKVEndpoint on ARM template
             "api_version": "api-version=7.3-preview",
-            "bearer_token": "eyJ***6qlA" **<- AAD token obtained above**
+            "bearer_token": "eyJ***6qlA" <- AAD token obtained above
         }
     },
     "claims": [
         [
             {
                 "claim": "x-ms-sevsnpvm-hostdata",
-                "equals": "aaa4e****cc09d" **<- Security hash obtained above** 
+                "equals": "aaa4e****cc09d" <- Security hash obtained above
             },
             {
                 "claim": "x-ms-compliance-status",
@@ -299,6 +299,11 @@ Upon successful import completion, you should see something similar to the follo
 [34 71 33 117 113 25 191 84 199 236 137 166 201 103 83 20 203 233 66 236 121 110 223 2 122 99 106 20 22 212 49 224]
 https://accmhsm.managedhsm.azure.net/keys/doc-sample-key-release/8659****0cdff08
 {"version":"0.2","anyOf":[{"authority":"https://sharedeus2.eus2.test.attest.azure.net","allOf":[{"claim":"x-ms-sevsnpvm-hostdata","equals":"aaa7***7cc09d"},{"claim":"x-ms-compliance-status","equals":"azure-compliant-uvm"},{"claim":"x-ms-sevsnpvm-is-debuggable","equals":"false"}]}]}
+
+In this case, I use the following command to verify my key has been successfully imported: 
+
+	az account set --subscription "my subscription"
+    az keyvault key list --hsm-name accmhsm -o table 
 
 **Deployment**: 
 
