@@ -108,12 +108,9 @@ This is a file inside the filesystem.
 
 ### Step by step example 
 
-Update the following [ARM template managed identity](aci-arm-template.json?plain=1#L22) that has the correct role based access. The managed identity needs *Key Vault Crypto Officer* and *Key Vault Crypto User* roles if using AKV. *Managed HSM Crypto Officer* and *Managed HSM Crypto User* roles for /keys if using managed HSM. Follow [Managed identity](#managed-identity) for detailed instruction. Update the [managed identity](aci-arm-template.json?plain=1#L123) in imageRegistryCredentials on the ARM template in order to access the private container registry. In our case, you do not need this section because we are using a public image. 
-
-
 **Preparation**: 
 
-Please follow [Encrypted filesystem](#encrypted-filesystem) to generate and upload the encrypted file system to container storage as a page blob. Once done, update the following ARM template managed identity portion that has the correct role based access. The [managed identity](aci-arm-template.json?plain=1#L22) needs *Key Vault Crypto Officer* and *Key Vault Crypto User* roles if using AKV. *Managed HSM Crypto Officer* and *Managed HSM Crypto User* roles for /keys if using managed HSM. Follow [Managed identity](#managed-identity) for detailed instruction. The same identity should also have the Reader and Storage Blob Reader/Contributor roles to the storage container on which the encrypted model image has been uploaded. Update the [image registry credentials](aci-arm-template.json?plain=1#L83) on the ARM template in order to access the private container registry. The credential could be either managed identity or username/password. In our case, you do not need this section because we are using a public image. 
+Please follow [Encrypted filesystem](#encrypted-filesystem) to generate and upload the encrypted file system to container storage as a page blob. Once done, update the following ARM template managed identity portion that has the correct role based access. The [ARM template managed identity](aci-arm-template.json?plain=1#L22) needs *Key Vault Crypto Officer* and *Key Vault Crypto User* roles if using AKV. *Managed HSM Crypto Officer* and *Managed HSM Crypto User* roles for /keys if using managed HSM. Follow [Managed identity](#managed-identity) for detailed instruction. The same identity should also have the Reader and Storage Blob Reader/Contributor roles to the storage container on which the encrypted model image has been uploaded. Update the [image registry credentials](aci-arm-template.json?plain=1#L83) on the ARM template in order to access the private container registry. The credential could be either managed identity or username/password. In our case, you do not need this section because we are using a public image. 
 
 **Encfs sidecar argument**: 
 
@@ -129,7 +126,7 @@ The value of [`EncfsSideCarArgs`](aci-arm-template.json?plain=1#L34) on the ARM 
 
 **Generate security policy**: 
 
-Run the following command to generate the security policy and include the `--deubg-mode` option so that the security policy allows users to shell into the container for debugging purposes. 
+Run the following command to generate the security policy and include the `--debug-mode` option so that the security policy allows users to shell into the container for debugging purposes. 
 
     az confcom acipolicygen -a aci-arm-template.json --debug-mode
 
