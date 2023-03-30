@@ -296,7 +296,6 @@ func (akv AKV) ImportPlaintextKey(key interface{}, releasePolicy ReleasePolicy, 
 		return nil, errors.Wrapf(err, "marshalling import key request failed")
 	}
 
-	fmt.Println(string(importKeyJSON))
 	// Create HTTP request for AKV
 	uri := fmt.Sprintf(AKVImportKeyRequestURITemplate, akv.Endpoint, keyName, akv.APIVersion)
 	httpResponse, err := common.HTTPPRequest("PUT", uri, importKeyJSON, akv.BearerToken)
