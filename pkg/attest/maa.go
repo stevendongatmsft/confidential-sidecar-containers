@@ -4,9 +4,11 @@
 package attest
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"net/http"
 
 	"io/ioutil"
 	"math/rand"
@@ -15,6 +17,7 @@ import (
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/common"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"moul.io/http2curl"
 )
 
 const (
@@ -31,9 +34,8 @@ type MAA struct {
 
 // MAA SNP Request Body class
 type maaReport struct {
-	SNPReport    string `json:"SnpReport"`
-	CertChain    string `json:"VcekCertChain"`
-	Endorsements string `json:"Endorsements"`
+	SNPReport string `json:"SnpReport"`
+	CertChain string `json:"VcekCertChain"`
 }
 
 // MAA expects Endorsements to contain a json array (named "Uvm") of base64url encoded
@@ -89,9 +91,8 @@ func newAttestSNPRequestBody(snpAttestationReport []byte, vcekCertChain []byte, 
 	// the maa report is a bundle of the signed attestation report and
 	// the cert chain that endorses the signing key
 	maaReport := maaReport{
-		SNPReport:    base64.URLEncoding.EncodeToString(snpAttestationReport),
-		CertChain:    base64.URLEncoding.EncodeToString(vcekCertChain),
-		Endorsements: base64urlEncodedmaaEndorsement,
+		SNPReport: base64.URLEncoding.EncodeToString(snpAttestationReport),
+		CertChain: base64.URLEncoding.EncodeToString(vcekCertChain),
 	}
 
 	maaReportJSONBytes, err := json.Marshal(maaReport)
@@ -127,6 +128,41 @@ func newAttestSNPRequestBody(snpAttestationReport []byte, vcekCertChain []byte, 
 
 	return &request, nil
 }
+func newAttestSNPRequestBody1(snpAttestationReport, vcekCertChain, policyBlob, keyBlob []byte) (*attestSNPRequestBody, error) {
+	var request attestSNPRequestBody
+	// the maa report is a bundle of the signed attestation report and
+	// the cert chain that endorses the signing key
+	maaReport := maaReport{
+		SNPReport: base64.URLEncoding.EncodeToString(snpAttestationReport),
+		CertChain: base64.URLEncoding.EncodeToString(vcekCertChain),
+	}
+
+	maaReportJSONBytes, err := json.Marshal(maaReport)
+	if err != nil {
+		return nil, errors.Wrapf(err, "marhalling maa Report field failed")
+	}
+
+	request.Report = base64.URLEncoding.EncodeToString(maaReportJSONBytes)
+
+	// the key blob is passed as runtime data
+	request.RuntimeData = attestedData{
+		Data:     base64.URLEncoding.EncodeToString(keyBlob),
+		DataType: "JSON",
+	}
+
+	// the policy blob is passed as inittime data
+	if policyBlob != nil {
+		request.InittimeData = attestedData{
+			Data:     base64.URLEncoding.EncodeToString(policyBlob),
+			DataType: "JSON",
+		}
+	}
+
+	rand.Seed(time.Now().UnixNano())
+	request.Nonce = rand.Uint64()
+
+	return &request, nil
+}
 
 // attest interracts with MAA to fetch an MAA token. A valid MAA attest request requires a
 // cert chain that endorses the signing key of the attestation report, the hardware attestation
@@ -146,12 +182,21 @@ func (maa MAA) attest(SNPReportHexBytes []byte, vcekCertChain []byte, policyBlob
 	if err != nil {
 		return "", errors.Wrapf(err, "creating new AttestSNPRequestBody failed")
 	}
-
+	fmt.Print("printing out request --------")
+	fmt.Printf("%+v\n", request)
+	fmt.Println("requestReport ", request.Report)
+	fmt.Println("requestRuntimeDataData", request.RuntimeData.Data)
+	fmt.Println("request.RuntimeData.DataType", request.RuntimeData.DataType)
+	fmt.Println("request.InittimeData.Data", request.InittimeData.Data)
+	fmt.Println("request.InittimeData.DataType", request.InittimeData.DataType)
+	fmt.Println("request.RuntimeData.DataType", request.RuntimeData.DataType)
+	fmt.Println("request.Nonce ", request.Nonce)
+	fmt.Print("done printing out request --------")
 	maaRequestJSONData, err := json.Marshal(request)
 	if err != nil {
 		return "", errors.Wrapf(err, "marshalling maa request failed")
 	}
-	logrus.Debugf("MAA Request: %s\n", string(maaRequestJSONData))
+	fmt.Printf("MAA Request: %s\n", string(maaRequestJSONData))
 
 	if common.GenerateTestData {
 		ioutil.WriteFile("request.json", maaRequestJSONData, 0644)
@@ -159,6 +204,12 @@ func (maa MAA) attest(SNPReportHexBytes []byte, vcekCertChain []byte, policyBlob
 
 	// HTTP POST request to MAA service
 	uri := fmt.Sprintf(AttestRequestURITemplate, maa.Endpoint, maa.TEEType, maa.APIVersion)
+
+	req, _ := http.NewRequest("POST", uri, bytes.NewBuffer(maaRequestJSONData))
+	req.Header.Set("Content-Type", "application/json")
+	command, _ := http2curl.GetCurlCommand(req)
+	fmt.Println("curl command is: ", command)
+
 	httpResponse, err := common.HTTPPRequest("POST", uri, maaRequestJSONData, "")
 	if err != nil {
 		return "", errors.Wrapf(err, "maa post request failed")
@@ -186,4 +237,92 @@ func (maa MAA) attest(SNPReportHexBytes []byte, vcekCertChain []byte, policyBlob
 
 	logrus.Debugf("MAA Token: %s", maaResponse.Token)
 	return maaResponse.Token, nil
+}
+
+func (maa MAA) attestold(SNPReportHexBytes []byte, vcekCertChain []byte, policyBlobBytes []byte, keyBlobBytes []byte) (MAAToken string, err error) {
+	// Construct attestation request that contain the four attributes
+	request, err := newAttestSNPRequestBodyOld(SNPReportHexBytes, vcekCertChain, policyBlobBytes, keyBlobBytes)
+	if err != nil {
+		return "", errors.Wrapf(err, "creating new AttestSNPRequestBody failed")
+	}
+
+	maaRequestJSONData, err := json.Marshal(request)
+	if err != nil {
+		return "", errors.Wrapf(err, "marshalling maa request failed")
+	}
+	logrus.Debugf("MAA Request: %s\n", string(maaRequestJSONData))
+
+	// HTTP POST request to MAA service
+
+	uri := fmt.Sprintf(AttestRequestURITemplate, maa.Endpoint, maa.TEEType, maa.APIVersion)
+
+	req, _ := http.NewRequest("POST", uri, bytes.NewBuffer(maaRequestJSONData))
+	req.Header.Set("Content-Type", "application/json")
+	command, _ := http2curl.GetCurlCommand(req)
+	fmt.Println("curl command is: ", command)
+
+	httpResponse, err := common.HTTPPRequest("POST", uri, maaRequestJSONData, "")
+	if err != nil {
+		return "", errors.Wrapf(err, "maa post request failed")
+	}
+
+	httpResponseBodyBytes, err := common.HTTPResponseBody(httpResponse)
+	if err != nil {
+		logrus.Debugf("MAA Response header: %v", httpResponse)
+		logrus.Debugf("MAA Response body bytes: %s", string(httpResponseBodyBytes))
+		return "", errors.Wrapf(err, "pulling maa post response failed")
+	}
+
+	// Retrieve MAA token from the JWT response returned by MAA
+	var maaResponse struct {
+		Token string
+	}
+
+	if err = json.Unmarshal(httpResponseBodyBytes, &maaResponse); err != nil {
+		return "", errors.Wrapf(err, "unmarshalling maa http response body failed")
+	}
+
+	if maaResponse.Token == "" {
+		return "", errors.New("empty token string in maa response")
+	}
+
+	logrus.Debugf("MAA Token: %s", maaResponse.Token)
+	return maaResponse.Token, nil
+}
+
+func newAttestSNPRequestBodyOld(snpAttestationReport, vcekCertChain, policyBlob, keyBlob []byte) (*attestSNPRequestBody, error) {
+	var request attestSNPRequestBody
+	fmt.Println("we are using newAttestSNPRequestBodyOld")
+	// the maa report is a bundle of the signed attestation report and
+	// the cert chain that endorses the signing key
+	maaReport := maaReport{
+		SNPReport: base64.URLEncoding.EncodeToString(snpAttestationReport),
+		CertChain: base64.URLEncoding.EncodeToString(vcekCertChain),
+	}
+
+	maaReportJSONBytes, err := json.Marshal(maaReport)
+	if err != nil {
+		return nil, errors.Wrapf(err, "marhalling maa Report field failed")
+	}
+
+	request.Report = base64.URLEncoding.EncodeToString(maaReportJSONBytes)
+
+	// the key blob is passed as runtime data
+	request.RuntimeData = attestedData{
+		Data:     base64.URLEncoding.EncodeToString(keyBlob),
+		DataType: "JSON",
+	}
+
+	// the policy blob is passed as inittime data
+	if policyBlob != nil {
+		request.InittimeData = attestedData{
+			Data:     base64.URLEncoding.EncodeToString(policyBlob),
+			DataType: "JSON",
+		}
+	}
+
+	rand.Seed(time.Now().UnixNano())
+	request.Nonce = rand.Uint64()
+
+	return &request, nil
 }

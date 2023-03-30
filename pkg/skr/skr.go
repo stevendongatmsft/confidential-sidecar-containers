@@ -7,6 +7,8 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
+	"encoding/base64"
+	"fmt"
 	"strings"
 
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/attest"
@@ -68,6 +70,101 @@ func SecureKeyRelease(identity common.Identity, SKRKeyBlob KeyBlob, uvmInformati
 	// Generate an RSA pair that will be used for wrapping material released from a keyvault. MAA
 	// expects the public wrapping key to be formatted as a JSON Web Key (JWK).
 
+	//generate rsa key pair
+	privateWrappingKey, err := rsa.GenerateKey(rand.Reader, RSASize)
+	if err != nil {
+		return nil, errors.Wrapf(err, "rsa key pair generation failed")
+	}
+
+	// construct the key blob
+	jwkSetBytes, err := common.GenerateJWKSet(privateWrappingKey)
+	if err != nil {
+		return nil, errors.Wrapf(err, "generating key blob failed")
+	}
+
+	// Attest
+	maaToken, err = attest.Attest(SKRKeyBlob.Authority, jwkSetBytes, uvmInformation)
+	if err != nil {
+		return nil, errors.Wrapf(err, "attestation failed")
+	}
+	fmt.Println("released maaToken is: ", maaToken)
+
+	// 2. Interact with Azure Key Vault. The REST API of AKV requires
+	//     authentication using an Azure authentication token.
+
+	//retrieve an Azure authentication token for authenticating with AKV
+	if SKRKeyBlob.AKV.BearerToken == "" {
+		var ResourceIDTemplate string
+		// If endpoint contains managedhsm, request a token for managedhsm
+		// resource; otherwise for a vault
+		if strings.Contains(SKRKeyBlob.AKV.Endpoint, "managedhsm") {
+			ResourceIDTemplate = ResourceIdManagedHSM
+		} else {
+			ResourceIDTemplate = ResourceIdVault
+		}
+
+		token, err := common.GetToken(ResourceIDTemplate, identity)
+		if err != nil {
+			return nil, errors.Wrapf(err, "retrieving authentication token failed")
+		}
+
+		// set the azure authentication token to the AKV instance
+		SKRKeyBlob.AKV.BearerToken = token.AccessToken
+		logrus.Debugf("AAD Token: %s ", token.AccessToken)
+	}
+
+	// use the MAA token obtained from the AKV's authority to retrieve the key identified by kid. The ReleaseKey
+	// operation requires the private wrapping key to unwrap the encrypted key material released from
+	// the AKV.
+
+	keyBytes, kty, err := SKRKeyBlob.AKV.ReleaseKey(maaToken, SKRKeyBlob.KID, privateWrappingKey)
+
+	if err != nil {
+		logrus.Debugf("releasing the key %s failed. err: %s", SKRKeyBlob.KID, err.Error())
+		return nil, errors.Wrapf(err, "releasing the key %s failed", SKRKeyBlob.KID)
+	} else {
+		fmt.Println("key has been released")
+	}
+
+	logrus.Debugf("Key Type: %s Key %v", kty, keyBytes)
+
+	if kty == "oct" || kty == "oct-HSM" {
+		jwKey := jwk.NewSymmetricKey()
+		err := jwKey.FromRaw(keyBytes)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not encode OCT key as JWK")
+		}
+		return jwKey, nil
+	} else if kty == "RSA-HSM" || kty == "RSA" {
+		key, err := x509.ParsePKCS8PrivateKey(keyBytes)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not parse RSA key")
+		}
+
+		var privateRSAKey *rsa.PrivateKey = key.(*rsa.PrivateKey)
+
+		jwKey := jwk.NewRSAPrivateKey()
+		err = jwKey.FromRaw(privateRSAKey)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not encode RSA key as JWK")
+		}
+		return jwKey, nil
+	} else {
+		return nil, errors.Wrapf(err, "released key type not supported")
+	}
+}
+
+func SecureKeyRelease1(certCache attest.CertCache, identity common.Identity, SKRKeyBlob KeyBlob, uvmInformation common.UvmInformation) (_ jwk.Key, err error) {
+
+	logrus.Debugf("Releasing key blob: %v", SKRKeyBlob)
+
+	// Retrieve an MAA token
+
+	var maaToken string
+
+	// Generate an RSA pair that will be used for wrapping material released from a keyvault. MAA
+	// expects the public wrapping key to be formatted as a JSON Web Key (JWK).
+
 	// generate rsa key pair
 	privateWrappingKey, err := rsa.GenerateKey(rand.Reader, RSASize)
 	if err != nil {
@@ -81,6 +178,7 @@ func SecureKeyRelease(identity common.Identity, SKRKeyBlob KeyBlob, uvmInformati
 	}
 
 	// Attest
+	fmt.Println("about to enter secure attest1")
 	maaToken, err = attest.Attest(SKRKeyBlob.Authority, jwkSetBytes, uvmInformation)
 	if err != nil {
 		return nil, errors.Wrapf(err, "attestation failed")
@@ -121,7 +219,7 @@ func SecureKeyRelease(identity common.Identity, SKRKeyBlob KeyBlob, uvmInformati
 	}
 
 	logrus.Debugf("Key Type: %s Key %v", kty, keyBytes)
-
+	//return keyBytes, nil
 	if kty == "oct" || kty == "oct-HSM" {
 		jwKey := jwk.NewSymmetricKey()
 		err := jwKey.FromRaw(keyBytes)
@@ -146,4 +244,73 @@ func SecureKeyRelease(identity common.Identity, SKRKeyBlob KeyBlob, uvmInformati
 	} else {
 		return nil, errors.Wrapf(err, "released key type not supported")
 	}
+}
+
+func SecureKeyReleaseOld(EncodedSecurityPolicy string, certCache attest.CertCache, identity common.Identity, SKRKeyBlob KeyBlob) (_ []byte, err error) {
+
+	logrus.Debugf("Releasing key blob: %v", SKRKeyBlob)
+
+	// Retrieve an MAA token
+
+	var maaToken string
+
+	// Generate an RSA pair that will be used for wrapping material released from a keyvault. MAA
+	// expects the public wrapping key to be formatted as a JSON Web Key (JWK).
+
+	// generate rsa key pair
+	privateWrappingKey, err := rsa.GenerateKey(rand.Reader, RSASize)
+	if err != nil {
+		return nil, errors.Wrapf(err, "rsa key pair generation failed")
+	}
+
+	// construct the key blob
+	jwkSetBytes, err := common.GenerateJWKSet(privateWrappingKey)
+	if err != nil {
+		return nil, errors.Wrapf(err, "generating key blob failed")
+	}
+
+	// base64 decode the incoming encoded security policy
+	if EncodedSecurityPolicy == "" {
+		maaToken, err = attest.AttestOld(certCache, SKRKeyBlob.Authority, nil, jwkSetBytes)
+		if err != nil {
+			return nil, errors.Wrapf(err, "attestation failed")
+		}
+	} else {
+		policyBlobBytes, err := base64.StdEncoding.DecodeString(EncodedSecurityPolicy)
+		if err != nil {
+			return nil, errors.Wrap(err, "decoding policy from Base64 format failed")
+		}
+
+		// Attest
+		maaToken, err = attest.AttestOld(certCache, SKRKeyBlob.Authority, policyBlobBytes, jwkSetBytes)
+		if err != nil {
+			return nil, errors.Wrapf(err, "attestation failed")
+		}
+	}
+
+	// 2. Interact with Azure Key Vault managed HSM. The REST API of AKV managed HSM
+	// requires authentication using an Azure authentication token.
+
+	// retrieve an Azure authentication token for authenticating with managed hsm
+	if SKRKeyBlob.AKV.BearerToken == "" {
+		token, err := common.GetToken(ResourceIdManagedHSM, identity)
+		if err != nil {
+			return nil, errors.Wrapf(err, "retrieving authentication token failed")
+		}
+
+		// set the azure authentication token to the MHSM instance
+		SKRKeyBlob.AKV.BearerToken = token.AccessToken
+		logrus.Debugf("AAD Token: %s ", token.AccessToken)
+	}
+
+	// use the MAA token obtained from the mhsm's authority to retrieve the key identified by kid. The ReleaseKey
+	// operation requires the private wrapping key to unwrap the encrypted key material released from
+	// the managed HSM.
+	key, _, err := SKRKeyBlob.AKV.ReleaseKey(maaToken, SKRKeyBlob.KID, privateWrappingKey)
+	logrus.Debugf("Releasing key: %v %s", key, err)
+	if err != nil {
+		return nil, errors.Wrapf(err, "releasing the key %s failed", SKRKeyBlob.KID)
+	}
+
+	return key, nil
 }

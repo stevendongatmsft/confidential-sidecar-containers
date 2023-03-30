@@ -335,6 +335,8 @@ func (akv AKV) ReleaseKey(maaTokenBase64 string, kid string, privateWrappingKey 
 	releaseKeyJSONData, err := json.Marshal(request)
 	if err != nil {
 		return nil, "", errors.Wrapf(err, "marshalling release key request failed")
+	} else {
+		fmt.Println("marshalling release key request ok")
 	}
 
 	uri := fmt.Sprintf(AKVReleaseKeyRequestURITemplate, akv.Endpoint, kid, akv.APIVersion)
@@ -342,17 +344,23 @@ func (akv AKV) ReleaseKey(maaTokenBase64 string, kid string, privateWrappingKey 
 	httpResponse, err := common.HTTPPRequest("POST", uri, releaseKeyJSONData, akv.BearerToken)
 	if err != nil {
 		return nil, "", errors.Wrapf(err, "AKV post request failed")
+	} else {
+		fmt.Println("AKV post request ok")
 	}
 
 	httpResponseBodyBytes, err := common.HTTPResponseBody(httpResponse)
 	if err != nil {
 		return nil, "", errors.Wrapf(err, "pulling AKV response body failed")
+	} else {
+		fmt.Println("pulling AKV response body ok")
 	}
 
 	// Extract the value field found in the response
 	AKVResponse := new(releaseKeyResponse)
 	if err = json.Unmarshal(httpResponseBodyBytes, AKVResponse); err != nil {
 		return nil, "", errors.Wrapf(err, "unmarshalling http response to releasekey response failed")
+	} else {
+		fmt.Println("unmarshalling http response to releasekey response ok")
 	}
 
 	return _releaseKey(akv, AKVResponse.Value, privateWrappingKey)

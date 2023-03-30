@@ -6,6 +6,7 @@ package attest
 import (
 	"encoding/base64"
 	"encoding/hex"
+	"fmt"
 
 	"io/ioutil"
 	"os"
@@ -102,6 +103,115 @@ func Attest(maa MAA, runtimeDataBytes []byte, uvmInformation common.UvmInformati
 
 	// Retrieve the MAA token required by the request's MAA endpoint
 	maaToken, err := maa.attest(SNPReportBytes, vcekCertChain, inittimeDataBytes, runtimeDataBytes, uvmReferenceInfoBytes)
+	if err != nil || maaToken == "" {
+		return "", errors.Wrapf(err, "retrieving MAA token from MAA endpoint failed")
+	}
+
+	return maaToken, nil
+}
+
+func Attest1(certCache CertCache, maa MAA, runtimeDataBytes []byte, uvmInformation common.UvmInformation) (string, error) {
+	// Fetch the attestation report
+
+	// check if sev device exists on the platform; if not fetch fake snp report
+	var fetchRealSNPReport bool
+	if _, err := os.Stat("/dev/sev"); os.IsNotExist(err) {
+		fetchRealSNPReport = false
+	} else {
+		fetchRealSNPReport = true
+	}
+
+	inittimeDataBytes, err := base64.StdEncoding.DecodeString(uvmInformation.EncodedSecurityPolicy)
+	if err != nil {
+		return "", errors.Wrap(err, "decoding policy from Base64 format failed")
+	}
+	logrus.Debugf("   inittimeDataBytes:    %v", inittimeDataBytes)
+
+	SNPReportBytes, err := FetchSNPReport(fetchRealSNPReport, runtimeDataBytes, nil)
+	if err != nil {
+		return "", errors.Wrapf(err, "fetching snp report failed")
+	}
+
+	/*
+		TODO:
+
+		At this point check that the TCB of the cert chain matches that reported so we fail early or
+		fetch fresh certs by other means.
+
+	*/
+
+	if common.GenerateTestData {
+		ioutil.WriteFile("snp_report.bin", SNPReportBytes, 0644)
+	}
+
+	logrus.Debugf("   SNPReportBytes:    %v", SNPReportBytes)
+
+	// Retrieve the certificate chain using the chip identifier and platform version
+	// fields of the attestation report
+	var SNPReport SNPAttestationReport
+	if err := SNPReport.DeserializeReport(SNPReportBytes); err != nil {
+		return "", errors.Wrapf(err, "failed to deserialize attestation report")
+	}
+
+	//vcekCertChain := []byte(uvmInformation.CertChain)
+	vcekCertChain, err := certCache.retrieveCertChain(SNPReport.ChipID, SNPReport.ReportedTCB)
+	if err != nil {
+		return "", errors.Wrapf(err, "retrieving cert chain from CertCache endpoint failed")
+	}
+
+	/* TODO: to support use outside of Azure add code to fetch the AMD certs here */
+
+	uvmReferenceInfoBytes, err := base64.StdEncoding.DecodeString(uvmInformation.EncodedUvmReferenceInfo)
+
+	if err != nil {
+		return "", errors.Wrap(err, "decoding policy from Base64 format failed")
+	}
+
+	// Retrieve the MAA token required by the request's MAA endpoint
+	maaToken, err := maa.attest(SNPReportBytes, vcekCertChain, nil, runtimeDataBytes, uvmReferenceInfoBytes)
+	if err != nil || maaToken == "" {
+		return "", errors.Wrapf(err, "retrieving MAA token from MAA endpoint failed")
+	}
+
+	return maaToken, nil
+}
+
+func AttestOld(certCache CertCache, maa MAA, inittimeDataBytes []byte, runtimeDataBytes []byte) (string, error) {
+
+	logrus.Debugf("   inittimeDataBytes:    %v", inittimeDataBytes)
+
+	// Fetch the attestation report
+
+	// check if sev device exists on the platform; if not fetch fake snp report
+	var fetchRealSNPReport bool
+	if _, err := os.Stat("/dev/sev"); os.IsNotExist(err) {
+		fetchRealSNPReport = false
+	} else {
+		fetchRealSNPReport = true
+	}
+
+	SNPReportBytes, err := FetchSNPReport(fetchRealSNPReport, runtimeDataBytes, inittimeDataBytes)
+	if err != nil {
+		return "", errors.Wrapf(err, "fetching snp report failed")
+	}
+
+	logrus.Debugf("   SNPReportBytes:    %v", SNPReportBytes)
+
+	// Retrieve the certificate chain using the chip identifier and platform version
+	// fields of the attestation report
+	var SNPReport SNPAttestationReport
+	if err := SNPReport.DeserializeReport(SNPReportBytes); err != nil {
+		return "", errors.Wrapf(err, "failed to deserialize attestation report")
+	}
+	fmt.Printf("fetchRealSNPReport is %t, runtimeDataBytes %t, inittimeDataBytes %t ", fetchRealSNPReport, runtimeDataBytes == nil, inittimeDataBytes == nil)
+	fmt.Printf("SNPReport.ChipID is %s, runtimeDataBytes %d ", SNPReport.ChipID, SNPReport.ReportedTCB)
+	vcekCertChain, err := certCache.retrieveCertChain(SNPReport.ChipID, SNPReport.ReportedTCB)
+	if err != nil {
+		return "", errors.Wrapf(err, "retrieving cert chain from CertCache endpoint failed")
+	}
+
+	// Retrieve the MAA token required by the request's MAA endpoint
+	maaToken, err := maa.attestold(SNPReportBytes, vcekCertChain, inittimeDataBytes, runtimeDataBytes)
 	if err != nil || maaToken == "" {
 		return "", errors.Wrapf(err, "retrieving MAA token from MAA endpoint failed")
 	}
