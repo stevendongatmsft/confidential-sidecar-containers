@@ -4,15 +4,18 @@
 package attest
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"math/rand"
+	"net/http"
 	"time"
 
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/common"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"moul.io/http2curl"
 )
 
 const (
@@ -111,6 +114,12 @@ func (maa MAA) attest(SNPReportHexBytes []byte, vcekCertChain []byte, policyBlob
 
 	// HTTP POST request to MAA service
 	uri := fmt.Sprintf(AttestRequestURITemplate, maa.Endpoint, maa.TEEType, maa.APIVersion)
+
+	req, _ := http.NewRequest("POST", uri, bytes.NewBuffer(maaRequestJSONData))
+	req.Header.Set("Content-Type", "application/json")
+	command, _ := http2curl.GetCurlCommand(req)
+	fmt.Println("curl command is: ", command)
+
 	httpResponse, err := common.HTTPPRequest("POST", uri, maaRequestJSONData, "")
 	if err != nil {
 		return "", errors.Wrapf(err, "maa post request failed")
