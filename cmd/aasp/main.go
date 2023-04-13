@@ -352,7 +352,7 @@ func retrieveVCertChain(certCache attest.CertCache, encodedUvmInformation *commo
 		return errors.Wrapf(err, "generating key blob failed")
 	}
 
-	SNPReportBytes, err := attest.FetchSNPReport(fetchRealSNPReport, jwkSetBytes, nil, "")
+	SNPReportBytes, err := attest.FetchSNPReport(fetchRealSNPReport, jwkSetBytes, nil)
 	if err != nil {
 		return errors.Wrapf(err, "fetching snp report failed")
 	}
@@ -381,7 +381,7 @@ func (s *server) GetReport(c context.Context, in *keyprovider.KeyProviderGetRepo
 		return nil, status.Errorf(codes.FailedPrecondition, "SEV guest driver is missing: %v", err)
 	}
 	fmt.Println("before fetch snp report")
-	SNPReportBytes, err := attest.FetchSNPReport(true, []byte(reportDataStr), nil, reportDataStr)
+	SNPReportBytes, err := attest.FetchSNPReport(true, nil, nil)
 	fmt.Println("print out snpreport", string(SNPReportBytes))
 	// cmd := exec.Command("/bin/get-snp-report", reportDataStr)
 	// reportOutput, err := cmd.Output()

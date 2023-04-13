@@ -234,9 +234,9 @@ func (r *SNPAttestationReport) SerializeReport() (report []uint8, err error) {
 
 // fetchSNPReport abstracts whether we fetch a real or a hardcoded snp
 // report (for testing purposes)
-func FetchSNPReport(real bool, keyBlob []byte, policyBlob []byte, s string) ([]byte, error) {
+func FetchSNPReport(real bool, keyBlob []byte, policyBlob []byte) ([]byte, error) {
 	if real {
-		return fetchRealSNPReport(nil, s)
+		return fetchRealSNPReport(keyBlob)
 	}
 
 	return fetchFakeSNPReport(keyBlob, policyBlob)
@@ -299,7 +299,7 @@ func fetchFakeSNPReport(keyBlobBytes []byte, policyBlobBytes []byte) ([]byte, er
 //
 // The get-snp-report tool is compiled during preperation of the container rootfs. The binary is expected to
 // be fount under /bin
-func fetchRealSNPReport(keyBytes []byte, s string) (reportBytes []byte, err error) {
+func fetchRealSNPReport(keyBytes []byte) (reportBytes []byte, err error) {
 	runtimeData := sha256.New()
 	if keyBytes != nil {
 		runtimeData.Write(keyBytes)
@@ -307,7 +307,7 @@ func fetchRealSNPReport(keyBytes []byte, s string) (reportBytes []byte, err erro
 
 	// the get-snp-report binary expects ReportData as the only command line attribute
 	logrus.Debugf("/bin/get-snp-report %s", hex.EncodeToString(runtimeData.Sum(nil)))
-	cmd := exec.Command("/bin/get-snp-report", s)
+	cmd := exec.Command("/bin/get-snp-report", hex.EncodeToString(runtimeData.Sum(nil)))
 
 	reportBytesString, err := cmd.Output()
 	if err != nil {

@@ -25,7 +25,7 @@ func RawAttest(inittimeDataBytes []byte, runtimeDataBytes []byte) (string, error
 		fetchRealSNPReport = true
 	}
 
-	SNPReportBytes, err := FetchSNPReport(fetchRealSNPReport, runtimeDataBytes, inittimeDataBytes, "")
+	SNPReportBytes, err := FetchSNPReport(fetchRealSNPReport, runtimeDataBytes, inittimeDataBytes)
 	if err != nil {
 		return "", errors.Wrapf(err, "fetching snp report failed")
 	}
@@ -64,7 +64,7 @@ func Attest(maa MAA, runtimeDataBytes []byte, uvmInformation common.UvmInformati
 	}
 	logrus.Debugf("   inittimeDataBytes:    %v", inittimeDataBytes)
 
-	SNPReportBytes, err := FetchSNPReport(fetchRealSNPReport, runtimeDataBytes, inittimeDataBytes, "")
+	SNPReportBytes, err := FetchSNPReport(fetchRealSNPReport, runtimeDataBytes, inittimeDataBytes)
 	if err != nil {
 		return "", errors.Wrapf(err, "fetching snp report failed")
 	}
