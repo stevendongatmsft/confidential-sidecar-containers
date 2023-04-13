@@ -15,7 +15,6 @@ import (
 	"log"
 	"net"
 	"os"
-	"os/exec"
 	"path"
 	"strings"
 
@@ -50,11 +49,15 @@ type AzureInformation struct {
 }
 
 var (
-	EncodedUvmInformation common.UvmInformation
+	azure_info               AzureInformation
+	defaultCertCacheEndpoint = "americas.test.acccache.azure.net"
+	EncodedUvmInformation    common.UvmInformation
 )
 
-var azure_info AzureInformation
-var defaultCertCacheEndpoint = "americas.test.acccache.azure.net"
+const (
+	aasp = "aasp"
+	aaa  = "aaa"
+)
 
 type DecryptConfig struct {
 	Parameters map[string][]string
@@ -195,7 +198,7 @@ func (s *server) WrapKey(c context.Context, grpcInput *keyprovider.KeyProviderKe
 
 	aa := tokens[0]
 	kid := tokens[1]
-	if aa != "aasp" && aa != "aaa" {
+	if !strings.EqualFold(aa, aaa) {
 		return nil, status.Errorf(codes.InvalidArgument, "Unexpected attestation agent %v specified. Perhaps you send the request to a wrong endpoint?", aa)
 	}
 	log.Printf("Attestation agent: %v, kid: %v", aa, kid)
@@ -235,7 +238,7 @@ func (s *server) UnWrapKey(c context.Context, grpcInput *keyprovider.KeyProvider
 	aa, _ := base64.StdEncoding.DecodeString(dc.Parameters["attestation-agent"][0])
 	log.Printf("Attestation agent name: %v", string(aa))
 
-	if string(aa) != "aasp" && string(aa) != "aaa" {
+	if !strings.EqualFold(string(aa), aaa) {
 		return nil, status.Errorf(codes.InvalidArgument, "Unexpected attestation agent %v specified. Perhaps you send the request to a wrong endpoint?", string(aa))
 	}
 
@@ -377,14 +380,15 @@ func (s *server) GetReport(c context.Context, in *keyprovider.KeyProviderGetRepo
 		return nil, status.Errorf(codes.FailedPrecondition, "SEV guest driver is missing: %v", err)
 	}
 
-	cmd := exec.Command("/bin/get-snp-report", reportDataStr)
-	reportOutput, err := cmd.Output()
+	SNPReportBytes, err := attest.FetchSNPReport(true, []byte(reportDataStr), nil)
+	// cmd := exec.Command("/bin/get-snp-report", reportDataStr)
+	// reportOutput, err := cmd.Output()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Failed to generate attestation report: %v", err)
 	}
 
 	return &keyprovider.KeyProviderGetReportOutput{
-		ReportHexString: string(reportOutput),
+		ReportHexString: string(SNPReportBytes),
 	}, nil
 }
 
