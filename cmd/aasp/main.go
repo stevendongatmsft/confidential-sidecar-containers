@@ -238,7 +238,8 @@ func (s *server) UnWrapKey(c context.Context, grpcInput *keyprovider.KeyProvider
 	aa, _ := base64.StdEncoding.DecodeString(dc.Parameters["attestation-agent"][0])
 	log.Printf("Attestation agent name: %v", string(aa))
 
-	if !strings.EqualFold(string(aa), aaa) {
+	fmt.Println("this is a debug message ", string(aa), " ", len(aa))
+	if !strings.EqualFold(string(aa), aasp) {
 		return nil, status.Errorf(codes.InvalidArgument, "Unexpected attestation agent %v specified. Perhaps you send the request to a wrong endpoint?", string(aa))
 	}
 
