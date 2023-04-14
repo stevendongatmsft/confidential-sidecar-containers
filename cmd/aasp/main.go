@@ -374,17 +374,14 @@ func retrieveVCertChain(certCache attest.CertCache, encodedUvmInformation *commo
 
 func (s *server) GetReport(c context.Context, in *keyprovider.KeyProviderGetReportInput) (*keyprovider.KeyProviderGetReportOutput, error) {
 	reportDataStr := in.GetReportDataHexString()
-	runtimeDataBytes, err := base64.StdEncoding.DecodeString(reportDataStr)
-	if err != nil {
-		return nil, status.Errorf(codes.FailedPrecondition, "SEV guest driver is missing: %v", err)
-	}
+
 	log.Printf("Received report data: %v", reportDataStr)
 
-	if _, err = os.Stat("/dev/sev"); err != nil {
+	if _, err := os.Stat("/dev/sev"); err != nil {
 		return nil, status.Errorf(codes.FailedPrecondition, "SEV guest driver is missing: %v", err)
 	}
 
-	SNPReportBytes, err := attest.FetchSNPReport(true, runtimeDataBytes, nil)
+	SNPReportBytes, err := attest.FetchSNPReport(true, []byte(reportDataStr), nil)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Failed to generate attestation report: %v", err)
 	}
