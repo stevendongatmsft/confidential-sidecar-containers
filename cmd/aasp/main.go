@@ -374,18 +374,17 @@ func retrieveVCertChain(certCache attest.CertCache, encodedUvmInformation *commo
 
 func (s *server) GetReport(c context.Context, in *keyprovider.KeyProviderGetReportInput) (*keyprovider.KeyProviderGetReportOutput, error) {
 	reportDataStr := in.GetReportDataHexString()
-	runtimeDataBytes, _ := base64.StdEncoding.DecodeString(reportDataStr)
-	log.Printf("Received report data: %v", reportDataStr)
-
-	if _, err := os.Stat("/dev/sev"); err != nil {
+	runtimeDataBytes, err := base64.StdEncoding.DecodeString(reportDataStr)
+	if err != nil {
 		return nil, status.Errorf(codes.FailedPrecondition, "SEV guest driver is missing: %v", err)
 	}
-	fmt.Println("before fetch snp report")
+	log.Printf("Received report data: %v", reportDataStr)
+
+	if _, err = os.Stat("/dev/sev"); err != nil {
+		return nil, status.Errorf(codes.FailedPrecondition, "SEV guest driver is missing: %v", err)
+	}
 
 	SNPReportBytes, err := attest.FetchSNPReport(true, runtimeDataBytes, nil)
-	fmt.Println("print out snpreport", string(SNPReportBytes))
-	// cmd := exec.Command("/bin/get-snp-report", reportDataStr)
-	// reportOutput, err := cmd.Output()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Failed to generate attestation report: %v", err)
 	}
@@ -393,23 +392,6 @@ func (s *server) GetReport(c context.Context, in *keyprovider.KeyProviderGetRepo
 	return &keyprovider.KeyProviderGetReportOutput{
 		ReportHexString: string(SNPReportBytes),
 	}, nil
-
-	// reportDataStr := in.GetReportDataHexString()
-	// log.Printf("Received report data: %v", reportDataStr)
-
-	// if _, err := os.Stat("/dev/sev"); err != nil {
-	// 	return nil, status.Errorf(codes.FailedPrecondition, "SEV guest driver is missing: %v", err)
-	// }
-
-	// cmd := exec.Command("/bin/get-snp-report", reportDataStr)
-	// reportOutput, err := cmd.Output()
-	// if err != nil {
-	// 	return nil, status.Errorf(codes.Internal, "Failed to generate attestation report: %v", err)
-	// }
-
-	// return &keyprovider.KeyProviderGetReportOutput{
-	// 	ReportHexString: string(reportOutput),
-	// }, nil
 }
 
 func main() {
