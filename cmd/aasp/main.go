@@ -10,6 +10,9 @@ import (
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
+	"encoding/base64"
+	"encoding/json"
+	"encoding/pem"
 	"flag"
 	"fmt"
 	"log"
@@ -17,10 +20,6 @@ import (
 	"os"
 	"path"
 	"strings"
-
-	"encoding/base64"
-	"encoding/json"
-	"encoding/pem"
 
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/aasp/keyprovider"
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/attest"
@@ -375,13 +374,15 @@ func retrieveVCertChain(certCache attest.CertCache, encodedUvmInformation *commo
 
 func (s *server) GetReport(c context.Context, in *keyprovider.KeyProviderGetReportInput) (*keyprovider.KeyProviderGetReportOutput, error) {
 	reportDataStr := in.GetReportDataHexString()
+	runtimeDataBytes, _ := base64.StdEncoding.DecodeString(reportDataStr)
 	log.Printf("Received report data: %v", reportDataStr)
-	fmt.Println("1232")
+
 	if _, err := os.Stat("/dev/sev"); err != nil {
 		return nil, status.Errorf(codes.FailedPrecondition, "SEV guest driver is missing: %v", err)
 	}
 	fmt.Println("before fetch snp report")
-	SNPReportBytes, err := attest.FetchSNPReport(true, nil, nil)
+
+	SNPReportBytes, err := attest.FetchSNPReport(true, runtimeDataBytes, nil)
 	fmt.Println("print out snpreport", string(SNPReportBytes))
 	// cmd := exec.Command("/bin/get-snp-report", reportDataStr)
 	// reportOutput, err := cmd.Output()
