@@ -21,11 +21,17 @@ import (
 
 var (
 	Identity              common.Identity
+	ServerCertCache       attest.CertCache
 	EncodedUvmInformation common.UvmInformation
 	ready                 bool
 )
 
 type AzureInformation struct {
+	// Endpoint of the certificate cache service from which
+	// the certificate chain endorsing hardware attestations
+	// can be retrieved. This is optional only when the container
+	// will expose attest/maa and key/release APIs.
+	CertCache attest.CertCache `json:"certcache,omitempty"`
 	// Identifier of the managed identity to be used
 	// for authenticating with AKV. This is optional and
 	// useful only when the container group has been assigned
@@ -143,7 +149,7 @@ func postMAAAttest(c *gin.Context) {
 		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 	}
 
-	maaToken, err := attest.Attest(maa, runtimeDataBytes, EncodedUvmInformation)
+	maaToken, err := attest.Attest(ServerCertCache, maa, runtimeDataBytes, EncodedUvmInformation)
 	if err != nil {
 		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 	}
@@ -186,7 +192,7 @@ func postKeyRelease(c *gin.Context) {
 		AKV:       akv,
 	}
 
-	jwKey, err := skr.SecureKeyRelease(Identity, skrKeyBlob, EncodedUvmInformation)
+	jwKey, err := skr.SecureKeyRelease(Identity, ServerCertCache, skrKeyBlob, EncodedUvmInformation)
 	if err != nil {
 		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 		return
@@ -203,14 +209,13 @@ func postKeyRelease(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"key": string(jwkJSONBytes)})
 }
 
-func setupServer(identity common.Identity) *gin.Engine {
-
+func setupServer(certCache attest.CertCache, identity common.Identity) *gin.Engine {
+	ServerCertCache = certCache
 	Identity = identity
 
 	logrus.Debugf("Setting security policy to %s", EncodedUvmInformation.EncodedSecurityPolicy)
 	logrus.Debugf("Setting platform certs to %s", EncodedUvmInformation.CertChain)
 	logrus.Debugf("Setting uvm reference to %s", EncodedUvmInformation.EncodedUvmReferenceInfo)
-
 	r := gin.Default()
 
 	r.GET("/status", getStatus)
@@ -221,7 +226,7 @@ func setupServer(identity common.Identity) *gin.Engine {
 	// the certificate chain endording the signing key of the hardware attestation.
 	// Hence, these APIs are exposed only if the platform certificate information
 	// has been provided at startup time.
-	if EncodedUvmInformation.CertChain != "" {
+	if ServerCertCache.Endpoint != "" || EncodedUvmInformation.CertChain != "" {
 		r.POST("/attest/maa", postMAAAttest)
 		r.POST("/key/release", postKeyRelease)
 	}
@@ -278,7 +283,7 @@ func main() {
 	logrus.Debugf("   Hostname:      %s", *hostname)
 	logrus.Debugf("   azure info:    %s", *azureInfoBase64string)
 
-	EncodedUvmInformation, err = common.GetUvmInfomation() // from the env.
+	EncodedUvmInformation, err = common.GetUvmInformation() // from the env.
 	if err != nil {
 		logrus.Fatalf("Failed to extract UVM_* environment variables: %s", err.Error())
 	}
@@ -301,5 +306,5 @@ func main() {
 	// See above comment about hostname and risk of breaking confidentiality
 	url := *hostname + ":" + *port
 
-	setupServer(info.Identity).Run(url)
+	setupServer(info.CertCache, info.Identity).Run(url)
 }

@@ -6,8 +6,9 @@ package common
 import (
 	"encoding/base64"
 	"encoding/json"
-
 	"io/ioutil"
+	"strconv"
+
 	"os"
 
 	"github.com/pkg/errors"
@@ -20,17 +21,16 @@ import (
 
 const GenerateTestData = false
 
-// Information supplied by the UVM specific to running Pod
-
 type UvmInformation struct {
 	EncodedSecurityPolicy   string // customer security policy
 	CertChain               string // platform certificates for the actual physical host, ascii PEM
 	EncodedUvmReferenceInfo string // endorsements for the particular UVM image
+	LocalThimUri            string // uri for the local THIM endpoint -- TO-DO: add method to get this value
+	ThimTcbm                uint64 // TCBM for the THIM Certs
 }
 
-// format of the json provided to the UVM by hcsshim. Comes fro the THIM endpoint
+// format of the json provided to the UVM by hcsshim. Comes from the THIM endpoint
 // and is a base64 encoded json string
-
 type THIMCerts struct {
 	VcekCert         string `json:"vcekCert"`
 	Tcbm             string `json:"tcbm"`
@@ -38,10 +38,11 @@ type THIMCerts struct {
 	CacheControl     string `json:"cacheControl"`
 }
 
-func THIMtoPEM(encodedHostCertsFromTHIM string) (string, error) {
+func THIMtoPEM(encodedHostCertsFromTHIM string) (string, uint64, error) {
+	var thimTcbm uint64
 	hostCertsFromTHIM, err := base64.StdEncoding.DecodeString(encodedHostCertsFromTHIM)
 	if err != nil {
-		return "", errors.Wrapf(err, "base64 decoding platform certs failed")
+		return "", thimTcbm, errors.Wrapf(err, "base64 decoding platform certs failed")
 	}
 
 	if GenerateTestData {
@@ -51,7 +52,7 @@ func THIMtoPEM(encodedHostCertsFromTHIM string) (string, error) {
 	var certsFromTHIM THIMCerts
 	err = json.Unmarshal(hostCertsFromTHIM, &certsFromTHIM)
 	if err != nil {
-		return "", errors.Wrapf(err, "json unmarshal platform certs failed")
+		return "", thimTcbm, errors.Wrapf(err, "json unmarshal platform certs failed")
 	}
 
 	certsString := certsFromTHIM.VcekCert + certsFromTHIM.CertificateChain
@@ -62,11 +63,17 @@ func THIMtoPEM(encodedHostCertsFromTHIM string) (string, error) {
 
 	logrus.Debugf("certsFromTHIM:\n\n%s\n\n", certsString)
 
-	return certsString, nil
+	thimTcbm, err = strconv.ParseUint(certsFromTHIM.Tcbm, 10, 64)
+	if err != nil {
+		return "", thimTcbm, errors.Wrap(err, "Unable to convert TCBM from THIM certificates to a uint64")
+	}
+
+	return certsString, thimTcbm, nil
 }
 
-func GetUvmInfomation() (UvmInformation, error) {
+func GetUvmInformation() (UvmInformation, error) {
 	var encodedUvmInformation UvmInformation
+
 	encodedHostCertsFromTHIM := os.Getenv("UVM_HOST_AMD_CERTIFICATE")
 
 	if GenerateTestData {
@@ -74,11 +81,12 @@ func GetUvmInfomation() (UvmInformation, error) {
 	}
 
 	if encodedHostCertsFromTHIM != "" {
-		certChain, err := THIMtoPEM(encodedHostCertsFromTHIM)
+		certsFromTHIM, tcbmFromTHIM, err := THIMtoPEM(encodedHostCertsFromTHIM)
 		if err != nil {
 			return encodedUvmInformation, err
 		}
-		encodedUvmInformation.CertChain = certChain
+		encodedUvmInformation.ThimTcbm = tcbmFromTHIM
+		encodedUvmInformation.CertChain = certsFromTHIM
 	}
 	encodedUvmInformation.EncodedSecurityPolicy = os.Getenv("UVM_SECURITY_POLICY")
 	encodedUvmInformation.EncodedUvmReferenceInfo = os.Getenv("UVM_REFERENCE_INFO")
