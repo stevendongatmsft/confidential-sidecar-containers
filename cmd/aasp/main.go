@@ -285,14 +285,10 @@ func (s *server) UnWrapKey(c context.Context, grpcInput *keyprovider.KeyProvider
 		AKV:       mhsm,
 	}
 
-	if retrieveVCertChain(azure_info.CertCache, &EncodedUvmInformation); err != nil {
-		return nil, status.Errorf(codes.Internal, "SKR failed: %v", err)
-	}
-
 	// MHSM has limit on the request size. We do not pass the EncodedSecurityPolicy here so
 	// it is not presented as fine-grained init-time claims in the MAA token, which would
 	// introduce larger MAA tokens that MHSM would accept
-	keyBytes, err := skr.SecureKeyRelease(azure_info.Identity, skrKeyBlob, EncodedUvmInformation)
+	keyBytes, err := skr.SecureKeyRelease(azure_info.Identity, azure_info.CertCache, skrKeyBlob, EncodedUvmInformation)
 	if err != nil {
 		return nil, errors.Wrapf(err, "SKR failed")
 	}
@@ -320,56 +316,6 @@ func (s *server) UnWrapKey(c context.Context, grpcInput *keyprovider.KeyProvider
 	return &keyprovider.KeyProviderKeyWrapProtocolOutput{
 		KeyProviderKeyWrapProtocolOutput: protocolBytes,
 	}, nil
-}
-
-// This logic should really belong to attest package. But because we will eventually change the way we retrieve certChain,
-// we should avoid putting temporary logic in attest pkg. Instead, just add final logic in attest and remove from here.
-func retrieveVCertChain(certCache attest.CertCache, encodedUvmInformation *common.UvmInformation) error {
-	var fetchRealSNPReport bool
-	if _, err := os.Stat("/dev/sev"); os.IsNotExist(err) {
-		fetchRealSNPReport = false
-	} else {
-		fetchRealSNPReport = true
-	}
-
-	inittimeDataBytes, err := base64.StdEncoding.DecodeString(encodedUvmInformation.EncodedSecurityPolicy)
-	if err != nil {
-		return errors.Wrap(err, "decoding policy from Base64 format failed")
-	}
-
-	logrus.Debugf("   inittimeDataBytes:    %v", inittimeDataBytes)
-
-	// generate rsa key pair
-	privateWrappingKey, err := rsa.GenerateKey(rand.Reader, skr.RSASize)
-	if err != nil {
-		return errors.Wrapf(err, "rsa key pair generation failed")
-	}
-
-	// construct the key blob
-	jwkSetBytes, err := common.GenerateJWKSet(privateWrappingKey)
-	if err != nil {
-		return errors.Wrapf(err, "generating key blob failed")
-	}
-
-	SNPReportBytes, err := attest.FetchSNPReport(fetchRealSNPReport, jwkSetBytes, nil)
-	if err != nil {
-		return errors.Wrapf(err, "fetching snp report failed")
-	}
-
-	// Retrieve the certificate chain using the chip identifier and platform version
-	// fields of the attestation report
-	var SNPReport attest.SNPAttestationReport
-	if err := SNPReport.DeserializeReport(SNPReportBytes); err != nil {
-		return errors.Wrapf(err, "failed to deserialize attestation report")
-	}
-
-	vcekCertChain, err := certCache.GetCertChain(SNPReport.ChipID, SNPReport.ReportedTCB)
-	if err != nil {
-		return errors.Wrapf(err, "retrieving cert chain from CertCache endpoint failed")
-	}
-
-	encodedUvmInformation.CertChain = string(vcekCertChain)
-	return nil
 }
 
 func (s *server) GetReport(c context.Context, in *keyprovider.KeyProviderGetReportInput) (*keyprovider.KeyProviderGetReportOutput, error) {
@@ -459,7 +405,7 @@ func main() {
 		log.Printf("Warning: Env AZURE_CLIENT_ID is not set")
 	}
 
-	EncodedUvmInformation, _ = common.GetUvmInfomation()
+	EncodedUvmInformation, _ = common.GetUvmInformation()
 
 	s := grpc.NewServer()
 	keyprovider.RegisterKeyProviderServiceServer(s, &server{})
