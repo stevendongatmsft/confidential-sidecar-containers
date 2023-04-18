@@ -6,6 +6,7 @@ package attest
 import (
 	"encoding/base64"
 	"encoding/hex"
+	"fmt"
 
 	"io/ioutil"
 	"os"
@@ -17,13 +18,11 @@ import (
 
 func GetSNPReport(securityPolicy string, runtimeDataBytes []byte) ([]byte, []byte, error) {
 	// check if sev device exists on the platform; if not fetch fake snp report
-	fetchRealSNPReport := true
-	if _, err := os.Stat("/dev/sev"); errors.Is(err, os.ErrNotExist) {
-		// dev/sev doesn't exist, check dev/sev-guest
-		if _, err := os.Stat("/dev/sev-guest"); errors.Is(err, os.ErrNotExist) {
-			// dev/sev-guest doesn't exist
-			fetchRealSNPReport = false
-		}
+	var fetchRealSNPReport bool
+	if _, err := os.Stat("/dev/sev"); os.IsNotExist(err) {
+		fetchRealSNPReport = false
+	} else {
+		fetchRealSNPReport = true
 	}
 
 	inittimeDataBytes, err := base64.StdEncoding.DecodeString(securityPolicy)
@@ -31,6 +30,7 @@ func GetSNPReport(securityPolicy string, runtimeDataBytes []byte) ([]byte, []byt
 		return nil, nil, errors.Wrap(err, "decoding policy from Base64 format failed")
 	}
 	logrus.Debugf("   inittimeDataBytes:    %v", inittimeDataBytes)
+	fmt.Println("xxx ", fetchRealSNPReport, " ", inittimeDataBytes, " ")
 
 	SNPReportBytes, err := FetchSNPReport(fetchRealSNPReport, runtimeDataBytes, inittimeDataBytes)
 	if err != nil {
