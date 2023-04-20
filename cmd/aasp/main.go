@@ -237,7 +237,6 @@ func (s *server) UnWrapKey(c context.Context, grpcInput *keyprovider.KeyProvider
 	aa, _ := base64.StdEncoding.DecodeString(dc.Parameters["attestation-agent"][0])
 	log.Printf("Attestation agent name: %v", string(aa))
 
-	fmt.Println("this is a debug message ", string(aa), " ", len(aa))
 	if !strings.EqualFold(string(aa), aasp) {
 		return nil, status.Errorf(codes.InvalidArgument, "Unexpected attestation agent %v specified. Perhaps you send the request to a wrong endpoint?", string(aa))
 	}
@@ -423,6 +422,7 @@ func main() {
 		log.Printf("Warning: Env AZURE_CLIENT_ID is not set")
 	}
 
+	//keep this line until verify key release
 	fmt.Printf("infoo1o %+v\n", azure_info.CertCache)
 	s := grpc.NewServer()
 	keyprovider.RegisterKeyProviderServiceServer(s, &server{})
