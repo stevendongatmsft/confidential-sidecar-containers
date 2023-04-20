@@ -338,6 +338,7 @@ func (s *server) GetReport(c context.Context, in *keyprovider.KeyProviderGetRepo
 }
 
 func main() {
+	azureInfoBase64string := flag.String("aasp-cert-cache-args", os.Getenv("AaspCertCacheArgs"), "optional base64-encoded json string with azure information")
 	port := flag.String("keyprovider_sock", "127.0.0.1:50000", "Port on which the key provider to listen")
 	flag.String("getresource_sock", "127.0.0.1:50001", "Port on which the resource provider to listen. Ignored")
 	infile := flag.String("infile", "", "The file with its content to be wrapped")
@@ -345,6 +346,10 @@ func main() {
 	outfile := flag.String("outfile", "", "The file to save the wrapped data")
 	logLevel := flag.String("loglevel", "debug", "Logging Level: trace, debug, info, warning, error, fatal, panic.")
 	flag.Parse()
+
+	if len(*azureInfoBase64string) == 0 {
+		log.Fatalf("aasp cert cache has to be set either through env var or through passing cmdline arg.")
+	}
 
 	level, err := logrus.ParseLevel(*logLevel)
 	if err != nil {
@@ -388,9 +393,33 @@ func main() {
 	}
 	log.Printf("Listening on port %v", *port)
 
+	logrus.Infof("Args:")
+	logrus.Debugf("   aasp cert cache info:    %s", *azureInfoBase64string)
+	logrus.Debugf("   keyprovider_sock:    %s", *port)
+	logrus.Debugf("   infile:    %s", *infile)
+	logrus.Debugf("   outfile:    %s", *outfile)
+	logrus.Debugf("   loglevel:    %s", *logLevel)
+
 	certCacheEndpoint := os.Getenv("CertCacheEndpoint")
 	if certCacheEndpoint == "" {
 		certCacheEndpoint = defaultCertCacheEndpoint
+	}
+
+	EncodedUvmInformation, _ = common.GetUvmInformation()
+
+	info := AzureInformation{}
+
+	// Decode base64 attestation information only if it s not empty
+	if *azureInfoBase64string != "" {
+		bytes, err := base64.StdEncoding.DecodeString(*azureInfoBase64string)
+		if err != nil {
+			logrus.Fatalf("Failed to decode base64: %s", err.Error())
+		}
+
+		err = json.Unmarshal(bytes, &info)
+		if err != nil {
+			logrus.Fatalf("Failed to unmarshal: %s", err.Error())
+		}
 	}
 
 	// Temporary solution until we get the cert chain from the host
@@ -405,8 +434,7 @@ func main() {
 		log.Printf("Warning: Env AZURE_CLIENT_ID is not set")
 	}
 
-	EncodedUvmInformation, _ = common.GetUvmInformation()
-
+	fmt.Printf("infoo1o %+v\n", info.CertCache)
 	s := grpc.NewServer()
 	keyprovider.RegisterKeyProviderServiceServer(s, &server{})
 	reflection.Register(s)
