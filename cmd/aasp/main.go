@@ -48,9 +48,9 @@ type AzureInformation struct {
 }
 
 var (
-	azure_info               AzureInformation
-	defaultCertCacheEndpoint = "americas.test.acccache.azure.net"
-	EncodedUvmInformation    common.UvmInformation
+	azure_info            AzureInformation
+	EncodedUvmInformation common.UvmInformation
+	CertCacheEndpoint     = "CertCacheEndpoint"
 )
 
 const (
@@ -338,7 +338,7 @@ func (s *server) GetReport(c context.Context, in *keyprovider.KeyProviderGetRepo
 }
 
 func main() {
-	azureInfoBase64string := flag.String("aasp-cert-cache-args", os.Getenv("AaspCertCacheArgs"), "optional base64-encoded json string with azure information")
+	azureInfoBase64string := flag.String("aasp-cert-cache-args", os.Getenv(CertCacheEndpoint), "optional base64-encoded json string with azure information")
 	port := flag.String("keyprovider_sock", "127.0.0.1:50000", "Port on which the key provider to listen")
 	flag.String("getresource_sock", "127.0.0.1:50001", "Port on which the resource provider to listen. Ignored")
 	infile := flag.String("infile", "", "The file with its content to be wrapped")
@@ -400,14 +400,10 @@ func main() {
 	logrus.Debugf("   outfile:    %s", *outfile)
 	logrus.Debugf("   loglevel:    %s", *logLevel)
 
-	certCacheEndpoint := os.Getenv("CertCacheEndpoint")
-	if certCacheEndpoint == "" {
-		certCacheEndpoint = defaultCertCacheEndpoint
+	EncodedUvmInformation, err = common.GetUvmInformation()
+	if err != nil {
+		logrus.Fatalf("Failed to extract UVM_* environment variables: %s", err.Error())
 	}
-
-	EncodedUvmInformation, _ = common.GetUvmInformation()
-
-	info := AzureInformation{}
 
 	// Decode base64 attestation information only if it s not empty
 	if *azureInfoBase64string != "" {
@@ -416,19 +412,12 @@ func main() {
 			logrus.Fatalf("Failed to decode base64: %s", err.Error())
 		}
 
-		err = json.Unmarshal(bytes, &info)
+		err = json.Unmarshal(bytes, &azure_info)
 		if err != nil {
 			logrus.Fatalf("Failed to unmarshal: %s", err.Error())
 		}
 	}
 
-	// Temporary solution until we get the cert chain from the host
-	azure_info.CertCache = attest.CertCache{
-		AMD:        false,
-		Endpoint:   certCacheEndpoint,
-		TEEType:    "SevSnpVM",
-		APIVersion: "api-version=2020-10-15-preview",
-	}
 	azure_info.Identity.ClientId = os.Getenv("AZURE_CLIENT_ID")
 	if azure_info.Identity.ClientId == "" {
 		log.Printf("Warning: Env AZURE_CLIENT_ID is not set")
