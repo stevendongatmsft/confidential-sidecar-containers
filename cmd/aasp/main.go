@@ -434,7 +434,7 @@ func main() {
 		log.Printf("Warning: Env AZURE_CLIENT_ID is not set")
 	}
 
-	fmt.Printf("infoo1o %+v\n", info.CertCache)
+	fmt.Printf("infoo1o %+v\n", azure_info.CertCache)
 	s := grpc.NewServer()
 	keyprovider.RegisterKeyProviderServiceServer(s, &server{})
 	reflection.Register(s)
