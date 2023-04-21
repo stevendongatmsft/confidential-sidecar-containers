@@ -18,7 +18,6 @@ import (
 	"log"
 	"net"
 	"os"
-	"os/exec"
 	"path"
 	"strings"
 
@@ -327,24 +326,24 @@ func (s *server) GetReport(c context.Context, in *keyprovider.KeyProviderGetRepo
 		return nil, status.Errorf(codes.FailedPrecondition, "SEV guest driver is missing: %v", err)
 	}
 
-	// SNPReportBytes, err := attest.FetchSNPReport(true, []byte(reportDataStr), nil)
-	// if err != nil {
-	// 	return nil, status.Errorf(codes.Internal, "Failed to generate attestation report: %v", err)
-	// }
-
-	// return &keyprovider.KeyProviderGetReportOutput{
-	// 	ReportHexString: string(SNPReportBytes),
-	// }, nil
-
-	cmd := exec.Command("/bin/get-snp-report", reportDataStr)
-	reportOutput, err := cmd.Output()
+	SNPReportBytes, err := attest.FetchSNPReport(true, []byte(reportDataStr), nil)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Failed to generate attestation report: %v", err)
 	}
 
 	return &keyprovider.KeyProviderGetReportOutput{
-		ReportHexString: string(reportOutput),
+		ReportHexString: string(SNPReportBytes),
 	}, nil
+
+	// cmd := exec.Command("/bin/get-snp-report", reportDataStr)
+	// reportOutput, err := cmd.Output()
+	// if err != nil {
+	// 	return nil, status.Errorf(codes.Internal, "Failed to generate attestation report: %v", err)
+	// }
+
+	// return &keyprovider.KeyProviderGetReportOutput{
+	// 	ReportHexString: string(reportOutput),
+	// }, nil
 }
 
 func main() {
