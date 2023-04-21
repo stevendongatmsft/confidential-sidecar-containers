@@ -314,17 +314,17 @@ func fetchRealSNPReport(keyBytes []byte) (reportBytes []byte, err error) {
 		return nil, errors.Wrapf(err, "cmd.Run() for fetching snp report failed")
 	}
 
-	// the get-snp-report binary outputs the raw hexadecimal representation  of the report
-	reportBytes = make([]byte, hex.DecodedLen(len(reportBytesString)))
+	// // the get-snp-report binary outputs the raw hexadecimal representation  of the report
+	// reportBytes = make([]byte, hex.DecodedLen(len(reportBytesString)))
 
-	num, err := hex.Decode(reportBytes, reportBytesString)
-	if err != nil {
-		return nil, errors.Wrapf(err, "decoding output to hexstring failed")
-	}
+	// num, err := hex.Decode(reportBytes, reportBytesString)
+	// if err != nil {
+	// 	return nil, errors.Wrapf(err, "decoding output to hexstring failed")
+	// }
 
-	if num != len(reportBytes) {
-		return nil, errors.Wrapf(err, "decoding output not expected number of bytes")
-	}
+	// if num != len(reportBytes) {
+	// 	return nil, errors.Wrapf(err, "decoding output not expected number of bytes")
+	// }
 
-	return reportBytes, nil
+	return reportBytesString, nil
 }
