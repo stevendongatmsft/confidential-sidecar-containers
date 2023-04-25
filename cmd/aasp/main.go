@@ -432,7 +432,7 @@ func main() {
 	}
 
 	azure_info.CertFetcher = attest.CertFetcher{
-		EndpointType: "AMD",
+		EndpointType: "AzCache",
 		Endpoint:     "americas.test.acccache.azure.net",
 		TEEType:      "SevSnpVM",
 		APIVersion:   "api-version=2020-10-15-preview",
