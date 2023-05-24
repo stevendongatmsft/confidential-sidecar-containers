@@ -115,6 +115,7 @@ func (certState *CertState) Attest(maa MAA, runtimeDataBytes []byte, uvmInformat
 
 	// At this point check that the TCB of the cert chain matches that reported so we fail early or
 	// fetch fresh certs by other means.
+	certState.Tcbm = 0
 	var vcekCertChain []byte
 	if SNPReport.ReportedTCB != certState.Tcbm {
 		// TCB values not the same, try refreshing cert cache first
