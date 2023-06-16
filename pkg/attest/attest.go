@@ -147,6 +147,7 @@ func (certState *CertState) Attest(maa MAA, runtimeDataBytes []byte, uvmInformat
 			}
 		}
 	} else {
+		fmt.Println("the staus ", uvmInformation.InitialCerts.CertificateChain == "")
 		certString := uvmInformation.InitialCerts.VcekCert + uvmInformation.InitialCerts.CertificateChain
 		vcekCertChain = []byte(certString)
 	}
