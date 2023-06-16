@@ -98,6 +98,8 @@ func RawAttest(inittimeDataBytes []byte, runtimeDataBytes []byte) (string, error
 //
 //	retrieval and has been reported by the PSP in the attestation report as REPORT DATA
 func (certState *CertState) Attest(maa MAA, runtimeDataBytes []byte, uvmInformation common.UvmInformation) (string, error) {
+	fmt.Println("the staus ", uvmInformation.InitialCerts.CertificateChain == "")
+	fmt.Println("the staus 2", uvmInformation.InitialCerts.VcekCert == "")
 	// Fetch the attestation report
 	SNPReportBytes, inittimeDataBytes, err := GetSNPReport(uvmInformation.EncodedSecurityPolicy, runtimeDataBytes)
 	if err != nil {
