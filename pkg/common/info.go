@@ -6,6 +6,7 @@ package common
 import (
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"strconv"
 
@@ -83,6 +84,7 @@ type UvmInformation struct {
 
 func GetUvmInformation() (UvmInformation, error) {
 	securityContextDir := os.Getenv("UVM_SECURITY_CONTEXT_DIR")
+	fmt.Println("security context dir ", securityContextDir)
 	if securityContextDir != "" {
 		return GetUvmInformationFromFiles()
 	} else {
@@ -136,37 +138,38 @@ func readSecurityContextFile(dir string, filename string) (string, error) {
 
 func GetUvmInformationFromFiles() (UvmInformation, error) {
 	var encodedUvmInformation UvmInformation
-
+	var err error
 	securityContextDir := os.Getenv("UVM_SECURITY_CONTEXT_DIR")
 	if securityContextDir == "" {
 		return encodedUvmInformation, errors.New("UVM_SECURITY_CONTEXT_DIR not set")
 	}
 
-	encodedHostCertsFromTHIM, err := readSecurityContextFile(securityContextDir, HostAMDCertFilename)
-	if err != nil {
-		return encodedUvmInformation, errors.Wrapf(err, "reading host amd cert failed")
-	}
+	// encodedHostCertsFromTHIM, err := readSecurityContextFile(securityContextDir, HostAMDCertFilename)
+	// if err != nil {
+	// 	return encodedUvmInformation, errors.Wrapf(err, "reading host amd cert failed")
+	// }
 
-	if GenerateTestData {
-		ioutil.WriteFile("uvm_host_amd_certificate.base64", []byte(encodedHostCertsFromTHIM), 0644)
-	}
+	// if GenerateTestData {
+	// 	ioutil.WriteFile("uvm_host_amd_certificate.base64", []byte(encodedHostCertsFromTHIM), 0644)
+	// }
 
-	if encodedHostCertsFromTHIM != "" {
-		_, _, err := encodedUvmInformation.InitialCerts.GetLocalCerts(encodedHostCertsFromTHIM)
-		if err != nil {
-			return encodedUvmInformation, err
-		}
-	}
+	// if encodedHostCertsFromTHIM != "" {
+	// 	_, _, err := encodedUvmInformation.InitialCerts.GetLocalCerts(encodedHostCertsFromTHIM)
+	// 	if err != nil {
+	// 		return encodedUvmInformation, err
+	// 	}
+	// }
 
-	encodedUvmInformation.EncodedSecurityPolicy, err = readSecurityContextFile(securityContextDir, PolicyFilename)
-	if err != nil {
-		return encodedUvmInformation, errors.Wrapf(err, "reading security policy failed")
-	}
-
+	// encodedUvmInformation.EncodedSecurityPolicy, err = readSecurityContextFile(securityContextDir, PolicyFilename)
+	// if err != nil {
+	// 	return encodedUvmInformation, errors.Wrapf(err, "reading security policy failed")
+	// }
+	fmt.Println("policy file name ", PolicyFilename)
 	encodedUvmInformation.EncodedUvmReferenceInfo, err = readSecurityContextFile(securityContextDir, ReferenceInfoFilename)
 	if err != nil {
 		return encodedUvmInformation, errors.Wrapf(err, "reading uvm reference info failed")
 	}
+	fmt.Println("retrieved reference info file in base64 format \n", encodedUvmInformation.EncodedUvmReferenceInfo)
 
 	if GenerateTestData {
 		ioutil.WriteFile("uvm_security_policy.base64", []byte(encodedUvmInformation.EncodedSecurityPolicy), 0644)
