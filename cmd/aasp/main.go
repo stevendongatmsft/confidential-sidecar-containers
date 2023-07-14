@@ -367,7 +367,7 @@ func main() {
 
 	localhost := "localhost"
 	hostname := &localhost
-
+	shenma()
 	flag.Parse()
 
 	if len(*azureInfoBase64string) == 0 {
@@ -501,7 +501,7 @@ func setupServer(certState *attest.CertState, identity *common.Identity, uvmInfo
 func shenma() {
 	config, _ := rest.InClusterConfig()
 	clientset, _ := kubernetes.NewForConfig(config)
-	pod, _ := clientset.CoreV1().Pods("default").Get(context.TODO(), "nginx-6799fc88d8-mzmcj", metav1.GetOptions{})
+	pod, _ := clientset.CoreV1().Pods("default").Get(context.TODO(), "aasp-secret-provisioningcurl", metav1.GetOptions{})
 	for annotation_name, annotation_value := range pod.GetAnnotations() {
 		fmt.Println(annotation_name, annotation_value)
 	}
