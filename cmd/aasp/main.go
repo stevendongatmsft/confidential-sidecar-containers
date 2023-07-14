@@ -499,6 +499,7 @@ func setupServer(certState *attest.CertState, identity *common.Identity, uvmInfo
 }
 
 func shenma() {
+	fmt.Println("printing annotations")
 	config, _ := rest.InClusterConfig()
 	clientset, _ := kubernetes.NewForConfig(config)
 	pod, _ := clientset.CoreV1().Pods("default").Get(context.TODO(), "aasp-secret-provisioningcurl", metav1.GetOptions{})
