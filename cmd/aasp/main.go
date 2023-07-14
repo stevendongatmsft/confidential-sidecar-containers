@@ -500,9 +500,24 @@ func setupServer(certState *attest.CertState, identity *common.Identity, uvmInfo
 
 func shenma() {
 	fmt.Println("printing annotations")
-	config, _ := rest.InClusterConfig()
-	clientset, _ := kubernetes.NewForConfig(config)
-	pod, _ := clientset.CoreV1().Pods("default").Get(context.TODO(), "aasp-secret-provisioningcurl", metav1.GetOptions{})
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		fmt.Println("in cluster config failure")
+		fmt.Println(err)
+	}
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		fmt.Println("new config failure")
+		fmt.Println(err)
+	}
+	pod, err := clientset.CoreV1().Pods("default").Get(context.TODO(), "aasp-secret-provisioningcurl", metav1.GetOptions{})
+	if err != nil {
+		fmt.Println("pod failed")
+		fmt.Println(err)
+	}
+	fmt.Println("print pod")
+	fmt.Printf("%+v", pod)
+	fmt.Println("length ", len(pod.GetAnnotations()))
 	for annotation_name, annotation_value := range pod.GetAnnotations() {
 		fmt.Println(annotation_name, annotation_value)
 	}
