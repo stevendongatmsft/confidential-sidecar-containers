@@ -1,0 +1,388 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    dapr.io/app-id: cellphonepubsub
+    dapr.io/app-port: "7005"
+    dapr.io/enabled: "true"
+  creationTimestamp: "2023-05-09T20:28:30Z"
+  generateName: cellphonepubsub-5b8c7c9d95-
+  labels:
+    app: cellphonepubsub
+    dapr.io/sidecar-injected: "true"
+    pod-template-hash: 5b8c7c9d95
+  name: cellphonepubsub-5b8c7c9d95-66gsb
+  namespace: default
+  ownerReferences:
+  - apiVersion: apps/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: ReplicaSet
+    name: cellphonepubsub-5b8c7c9d95
+    uid: d4612a55-cb4e-4f57-84b6-f4ca0f6c0ddc
+  resourceVersion: "6077543"
+  uid: 3ecafca2-58de-4020-af60-9c3dbd116364
+spec:
+  containers:
+  - command:
+    - /bin/aasp
+    env:
+    - name: CertCacheEndpoint
+      value: ewogICAgImNlcnRjYWNoZSI6IHsKCQkiZW5kcG9pbnRfdHlwZSI6ICJBekNhY2hlIiwKCQkiZW5kcG9pbnQiOiAiYW1lcmljYXMudGVzdC5hY2NjYWNoZS5henVyZS5uZXQiLAoJCSJ0ZWVfdHlwZSI6ICJTZXZTbnBWTSIsCgkJImFwaV92ZXJzaW9uIjogImFwaS12ZXJzaW9uPTIwMjAtMTAtMTUtcHJldmlldyIKCX0gIAp9
+    - name: DAPR_HTTP_PORT
+      value: "3500"
+    - name: DAPR_GRPC_PORT
+      value: "50001"
+    image: fishersnpregistry.azurecr.io/aasp-wip:2
+    imagePullPolicy: Always
+    name: aasp
+    resources: {}
+    securityContext:
+      privileged: true
+    terminationMessagePath: /dev/termination-log
+    terminationMessagePolicy: File
+    volumeMounts:
+    - mountPath: /dev/sev
+      name: dev-sev
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: kube-api-access-5cbt5
+      readOnly: true
+  - args:
+    - sleep infinity
+    command:
+    - /bin/sh
+    - -c
+    env:
+    - name: AttestClientMAAEndpoint
+      value: sharedeus2.eus2.test.attest.azure.net
+    - name: AttestClientRuntimeData
+      value: eyJrZXlzIjpbeyJlIjoiQVFBQiIsImtleV9vcHMiOlsiZW5jcnlwdCJdLCJraWQiOiJOdmhmdXEyY0NJT0FCOFhSNFhpOVByME5QXzlDZU16V1FHdFdfSEFMel93Iiwia3R5IjoiUlNBIiwibiI6InY5NjVTUm15cDh6Ykc1ZU5GdURDbW1pU2VhSHB1akcyYkNfa2VMU3V6dkRNTE8xV3lyVUp2ZWFhNWJ6TW9PMHBBNDZwWGttYnFIaXNvelZ6cGlORExDbzZkM3o0VHJHTWVGUGYyQVBJTXUtUlNyek41NnF2SFZ5SXI1Y2FXZkhXay1GTVJEd0FlZnlOWVJIa2RZWWtnbUZLNDRoaFVkdGxDQUtFdjVVUXBGWmp2aDRpSTlqVkJkR1lNeUJhS1FMaGpJNVdJaC1RRzZaYTVzU3VPQ0ZNbm11eXV2TjVEZmxwTEZ6NTk1U3MtRW9CSVktTmlsNmxDdHZjR2dSLUlialVZSEFPczVhamFtVHpnZU84a3gzVkNFOUhjeUtteVVac2l5aUY2SURScDJCcHkzTkhUakl6N3Rta3BUSHg3dEhuUnRsZkUyRlV2MEI2aV9RWWxfWkE1USJ9XX0=
+    - name: SkrClientKID
+      value: testkey000
+    - name: SkrClientMAAEndpoint
+      value: sharedeus2.eus2.attest.azure.net
+    - name: SkrClientAKVEndpoint
+      value: accmhsm.managedhsm.azure.net
+    - name: DAPR_HTTP_PORT
+      value: "3500"
+    - name: DAPR_GRPC_PORT
+      value: "50001"
+    image: fishersnpregistry.azurecr.io/grpc:2
+    imagePullPolicy: Always
+    name: sample-unwrap
+    resources: {}
+    terminationMessagePath: /dev/termination-log
+    terminationMessagePolicy: File
+    volumeMounts:
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: kube-api-access-5cbt5
+      readOnly: true
+  - env:
+    - name: DAPR_HTTP_PORT
+      value: "3500"
+    - name: DAPR_GRPC_PORT
+      value: "50001"
+    image: nramar/dapreventhubsconsumer:latest
+    imagePullPolicy: Always
+    name: cellphonepubsub
+    ports:
+    - containerPort: 7005
+      protocol: TCP
+    resources: {}
+    terminationMessagePath: /dev/termination-log
+    terminationMessagePolicy: File
+    volumeMounts:
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: kube-api-access-5cbt5
+      readOnly: true
+  - args:
+    - /daprd
+    - --mode
+    - kubernetes
+    - --dapr-http-port
+    - "3500"
+    - --dapr-grpc-port
+    - "50001"
+    - --dapr-internal-grpc-port
+    - "50002"
+    - --dapr-listen-addresses
+    - '[::1],127.0.0.1'
+    - --dapr-public-port
+    - "3501"
+    - --app-port
+    - "7005"
+    - --app-id
+    - cellphonepubsub
+    - --control-plane-address
+    - dapr-api.dapr-system.svc.cluster.local:80
+    - --app-protocol
+    - http
+    - --placement-host-address
+    - dapr-placement-server.dapr-system.svc.cluster.local:50005
+    - --config
+    - ""
+    - --log-level
+    - info
+    - --app-max-concurrency
+    - "-1"
+    - --sentry-address
+    - dapr-sentry.dapr-system.svc.cluster.local:80
+    - --enable-metrics=true
+    - --metrics-port
+    - "9090"
+    - --dapr-http-max-request-size
+    - "-1"
+    - --dapr-http-read-buffer-size
+    - "-1"
+    - --dapr-graceful-shutdown-seconds
+    - "-1"
+    - --disable-builtin-k8s-secret-store=false
+    - --app-channel-address
+    - ""
+    - --enable-mtls
+    env:
+    - name: NAMESPACE
+      value: default
+    - name: POD_NAME
+      valueFrom:
+        fieldRef:
+          apiVersion: v1
+          fieldPath: metadata.name
+    - name: DAPR_TRUST_ANCHORS
+      value: |
+        -----BEGIN CERTIFICATE-----
+        MIIB3TCCAYKgAwIBAgIRAJGWrHyQP6HZEyO5tfWF9l4wCgYIKoZIzj0EAwIwMTEX
+        MBUGA1UEChMOZGFwci5pby9zZW50cnkxFjAUBgNVBAMTDWNsdXN0ZXIubG9jYWww
+        HhcNMjMwNTA4MjIyNTI5WhcNMjQwNTA3MjI0MDI5WjAxMRcwFQYDVQQKEw5kYXBy
+        LmlvL3NlbnRyeTEWMBQGA1UEAxMNY2x1c3Rlci5sb2NhbDBZMBMGByqGSM49AgEG
+        CCqGSM49AwEHA0IABMqGL0hvwPgAV8cPLkfCf9xe0ExU2Okrbv7O/nc3UBYJpK5O
+        FmHhv8ne4sHsNgRkFQE4KAmzunsQf/bFNPkWdRujezB5MA4GA1UdDwEB/wQEAwIC
+        BDAdBgNVHSUEFjAUBggrBgEFBQcDAQYIKwYBBQUHAwIwDwYDVR0TAQH/BAUwAwEB
+        /zAdBgNVHQ4EFgQUnCDIUz0tyO6S3lbt+RpL8kSOw3swGAYDVR0RBBEwD4INY2x1
+        c3Rlci5sb2NhbDAKBggqhkjOPQQDAgNJADBGAiEA/wkaCmLHDaNhy+Cw6MlsCnHU
+        vKJJm0adtal7AKfyDiACIQDTSyh8cHXHWFLXHR3XICMcQj8p4TS+q5odAvi3E9wI
+        MQ==
+        -----END CERTIFICATE-----
+    - name: DAPR_CERT_CHAIN
+      value: |
+        -----BEGIN CERTIFICATE-----
+        MIIBxDCCAWqgAwIBAgIQRFo2NR+qzuafnWjqpxHF7jAKBggqhkjOPQQDAjAxMRcw
+        FQYDVQQKEw5kYXByLmlvL3NlbnRyeTEWMBQGA1UEAxMNY2x1c3Rlci5sb2NhbDAe
+        Fw0yMzA1MDgyMjI1MjlaFw0yNDA1MDcyMjQwMjlaMBgxFjAUBgNVBAMTDWNsdXN0
+        ZXIubG9jYWwwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAARf8fCKHQ0giP9nt+Af
+        yWMQMFpRklpafzaossg87QKMCVHDuBq8Z4a3t9nqOfWnHk6hB+6655qw1DALu8Yk
+        1l5Mo30wezAOBgNVHQ8BAf8EBAMCAQYwDwYDVR0TAQH/BAUwAwEB/zAdBgNVHQ4E
+        FgQUKfQ5rOGlKiqWkTIgUvtpsAVCCKAwHwYDVR0jBBgwFoAUnCDIUz0tyO6S3lbt
+        +RpL8kSOw3swGAYDVR0RBBEwD4INY2x1c3Rlci5sb2NhbDAKBggqhkjOPQQDAgNI
+        ADBFAiEAop215PFtgfTH14Bvd6LXNWoatr8ffz86/2a0a8b3XewCIDAJzR80IvtL
+        Se9suIfYvSz0vzT9rfc2PFLAd9sWb/RX
+        -----END CERTIFICATE-----
+    - name: DAPR_CERT_KEY
+      value: |
+        -----BEGIN EC PRIVATE KEY-----
+        MHcCAQEEIG8c1yjnemK6wpv9QyVcZnbiGCQKGcCrKySVTIUSFHU8oAoGCCqGSM49
+        AwEHoUQDQgAEX/Hwih0NIIj/Z7fgH8ljEDBaUZJaWn82qLLIPO0CjAlRw7gavGeG
+        t7fZ6jn1px5OoQfuuueasNQwC7vGJNZeTA==
+        -----END EC PRIVATE KEY-----
+    - name: SENTRY_LOCAL_IDENTITY
+      value: default:default
+    image: docker.io/daprio/daprd:edge
+    imagePullPolicy: IfNotPresent
+    livenessProbe:
+      failureThreshold: 3
+      httpGet:
+        path: /v1.0/healthz
+        port: 3501
+        scheme: HTTP
+      initialDelaySeconds: 3
+      periodSeconds: 6
+      successThreshold: 1
+      timeoutSeconds: 3
+    name: daprd
+    ports:
+    - containerPort: 3500
+      name: dapr-http
+      protocol: TCP
+    - containerPort: 50001
+      name: dapr-grpc
+      protocol: TCP
+    - containerPort: 50002
+      name: dapr-internal
+      protocol: TCP
+    - containerPort: 9090
+      name: dapr-metrics
+      protocol: TCP
+    readinessProbe:
+      failureThreshold: 3
+      httpGet:
+        path: /v1.0/healthz
+        port: 3501
+        scheme: HTTP
+      initialDelaySeconds: 3
+      periodSeconds: 6
+      successThreshold: 1
+      timeoutSeconds: 3
+    resources: {}
+    securityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      runAsNonRoot: false
+    terminationMessagePath: /dev/termination-log
+    terminationMessagePolicy: File
+    volumeMounts:
+    - mountPath: /var/run/secrets/dapr.io/sentrytoken
+      name: dapr-identity-token
+      readOnly: true
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: kube-api-access-5cbt5
+      readOnly: true
+  dnsPolicy: ClusterFirst
+  enableServiceLinks: true
+  imagePullSecrets:
+  - name: acr-secret
+  nodeName: aks-nodepool1-27892458-vmss000000
+  nodeSelector:
+    node-role.kubernetes.io/worker: ""
+  preemptionPolicy: PreemptLowerPriority
+  priority: 0
+  restartPolicy: Always
+  runtimeClassName: kata
+  schedulerName: default-scheduler
+  securityContext:
+    runAsUser: 0
+  serviceAccount: default
+  serviceAccountName: default
+  terminationGracePeriodSeconds: 30
+  tolerations:
+  - effect: NoExecute
+    key: node.kubernetes.io/not-ready
+    operator: Exists
+    tolerationSeconds: 300
+  - effect: NoExecute
+    key: node.kubernetes.io/unreachable
+    operator: Exists
+    tolerationSeconds: 300
+  volumes:
+  - hostPath:
+      path: /dev/sev
+      type: ""
+    name: dev-sev
+  - name: kube-api-access-5cbt5
+    projected:
+      defaultMode: 420
+      sources:
+      - serviceAccountToken:
+          expirationSeconds: 3607
+          path: token
+      - configMap:
+          items:
+          - key: ca.crt
+            path: ca.crt
+          name: kube-root-ca.crt
+      - downwardAPI:
+          items:
+          - fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+            path: namespace
+  - name: dapr-identity-token
+    projected:
+      defaultMode: 420
+      sources:
+      - serviceAccountToken:
+          audience: dapr.io/sentry
+          expirationSeconds: 7200
+          path: token
+status:
+  conditions:
+  - lastProbeTime: null
+    lastTransitionTime: "2023-05-09T20:28:30Z"
+    status: "True"
+    type: Initialized
+  - lastProbeTime: null
+    lastTransitionTime: "2023-05-09T20:28:30Z"
+    message: 'containers with unready status: [aasp]'
+    reason: ContainersNotReady
+    status: "False"
+    type: Ready
+  - lastProbeTime: null
+    lastTransitionTime: "2023-05-09T20:28:30Z"
+    message: 'containers with unready status: [aasp]'
+    reason: ContainersNotReady
+    status: "False"
+    type: ContainersReady
+  - lastProbeTime: null
+    lastTransitionTime: "2023-05-09T20:28:30Z"
+    status: "True"
+    type: PodScheduled
+  containerStatuses:
+  - containerID: containerd://5f4aab47fac9bd9340110baf890fc7f3a76d6e43da6d9d7f86fd8c04145ce709
+    image: fishersnpregistry.azurecr.io/aasp-wip:2
+    imageID: fishersnpregistry.azurecr.io/aasp-wip@sha256:f5a1f6f137771e778a8870e24dd226afaa4c2cabe88e8de86bf767091b170079
+    lastState:
+      terminated:
+        containerID: containerd://5f4aab47fac9bd9340110baf890fc7f3a76d6e43da6d9d7f86fd8c04145ce709
+        exitCode: 128
+        finishedAt: "2023-05-09T20:48:03Z"
+        message: |-
+          failed to create containerd task: failed to create shim task: All attempts fail:
+          #1: rpc error: code = Internal desc = failed to pull manifest Authentication failure: {"errors":[{"code":"UNAUTHORIZED","message":"authentication required, visit https://aka.ms/acr/authorization for more information."}]}
+          #2: rpc error: code = Internal desc = failed to pull manifest Authentication failure: {"errors":[{"code":"UNAUTHORIZED","message":"authentication required, visit https://aka.ms/acr/authorization for more information."}]}
+          #3: rpc error: code = Internal desc = failed to pull manifest Authentication failure: {"errors":[{"code":"UNAUTHORIZED","message":"authentication required, visit https://aka.ms/acr/authorization for more information."}]}
+          #4: rpc error: code = Internal desc = failed to pull manifest Authentication failure: {"errors":[{"code":"UNAUTHORIZED","message":"authentication required, visit https://aka.ms/acr/authorization for more information."}]}
+          #5: rpc error: code = Internal desc = failed to pull manifest Authentication failure: {"errors":[{"code":"UNAUTHORIZED","message":"authentication required, visit https://aka.ms/acr/authorization for more information."}]}
+          #6: rpc error: code = Internal desc = failed to pull manifest Authentication failure: {"errors":[{"code":"UNAUTHORIZED","message":"authentication required, visit https://aka.ms/acr/authorization for more information."}]}
+          #7: rpc error: code = Internal desc = failed to pull manifest Authentication failure: {"errors":[{"code":"UNAUTHORIZED","message":"authentication required, visit https://aka.ms/acr/authorization for more information."}]}
+          #8: rpc error: code = Internal desc = failed to pull manifest Authentication failure: {"errors":[{"code":"UNAUTHORIZED","message":"authentication required, visit https://aka.ms/acr/authorization for more information."}]}
+          #9: rpc error: code = Internal desc = failed to pull manifest Authentication failure: {"errors":[{"code":"UNAUTHORIZED","message":"authentication required, visit https://aka.ms/acr/authorization for more information."}]}
+          #10: rpc error: code = Internal desc = failed to pull manifest Authentication failure: {"errors":[{"code":"UNAUTHORIZED","message":"authentication required, visit https://aka.ms/acr/authorization for more information."}]}: unknown
+        reason: StartError
+        startedAt: "1970-01-01T00:00:00Z"
+    name: aasp
+    ready: false
+    restartCount: 7
+    started: false
+    state:
+      waiting:
+        message: back-off 5m0s restarting failed container=aasp pod=cellphonepubsub-5b8c7c9d95-66gsb_default(3ecafca2-58de-4020-af60-9c3dbd116364)
+        reason: CrashLoopBackOff
+  - containerID: containerd://43885c19ba1d4b6d1810c6bed74c1fd8e21ac0eb7acbfb760970f644b4cf2492
+    image: docker.io/nramar/dapreventhubsconsumer:latest
+    imageID: docker.io/nramar/dapreventhubsconsumer@sha256:b14bcda90b84151c9789c32478da4d693f138e48d19356d6e068d438cd8335ae
+    lastState: {}
+    name: cellphonepubsub
+    ready: true
+    restartCount: 0
+    started: true
+    state:
+      running:
+        startedAt: "2023-05-09T20:30:24Z"
+  - containerID: containerd://07eeeb418f3bfdd0ba405ff1f4c9c80709169291c7f6f9564f0d7eb1798f16bb
+    image: docker.io/daprio/daprd:edge
+    imageID: docker.io/daprio/daprd@sha256:758016f8588296cee82181119655ecaa4691642924d13059ae53f6f355ebd34e
+    lastState: {}
+    name: daprd
+    ready: true
+    restartCount: 0
+    started: true
+    state:
+      running:
+        startedAt: "2023-05-09T20:30:26Z"
+  - containerID: containerd://83cf9ed8e40cf25d06bbb82ae77dbea2ea96ce39f6480a8df727c6c92782f86c
+    image: docker.io/stevendongatmsft/grpc:2
+    imageID: docker.io/stevendongatmsft/grpc@sha256:936217cc09c91271161ea3a1969c5e862e742920104803829fe6e930d9e56a53
+    lastState: {}
+    name: sample-unwrap
+    ready: true
+    restartCount: 0
+    started: true
+    state:
+      running:
+        startedAt: "2023-05-09T20:30:22Z"
+  hostIP: 10.224.0.6
+  phase: Running
+  podIP: 10.244.2.109
+  podIPs:
+  - ip: 10.244.2.109
+  qosClass: BestEffort
+  startTime: "2023-05-09T20:28:30Z"

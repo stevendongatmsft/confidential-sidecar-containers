@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    run: busybox
+  name: busybox-cc
+spec:
+  containers:
+  - image: docker.io/library/busybox:latest
+    name: busybox
+    volumeMounts:
+    - mountPath: /opt/confidential-containers/share/kata-containers
+      name: uvm-reference-info
+  runtimeClassName: kata-cc
+  volumes:
+  - name: uvm-reference-info
+    hostPath:
+      path: /opt/confidential-containers/share/kata-containers 

@@ -144,27 +144,27 @@ func GetUvmInformationFromFiles() (UvmInformation, error) {
 		return encodedUvmInformation, errors.New("UVM_SECURITY_CONTEXT_DIR not set")
 	}
 
-	// encodedHostCertsFromTHIM, err := readSecurityContextFile(securityContextDir, HostAMDCertFilename)
-	// if err != nil {
-	// 	return encodedUvmInformation, errors.Wrapf(err, "reading host amd cert failed")
-	// }
+	encodedHostCertsFromTHIM, err := readSecurityContextFile(securityContextDir, HostAMDCertFilename)
+	if err != nil {
+		return encodedUvmInformation, errors.Wrapf(err, "reading host amd cert failed")
+	}
 
-	// if GenerateTestData {
-	// 	ioutil.WriteFile("uvm_host_amd_certificate.base64", []byte(encodedHostCertsFromTHIM), 0644)
-	// }
+	if GenerateTestData {
+		ioutil.WriteFile("uvm_host_amd_certificate.base64", []byte(encodedHostCertsFromTHIM), 0644)
+	}
 
-	// if encodedHostCertsFromTHIM != "" {
-	// 	_, _, err := encodedUvmInformation.InitialCerts.GetLocalCerts(encodedHostCertsFromTHIM)
-	// 	if err != nil {
-	// 		return encodedUvmInformation, err
-	// 	}
-	// }
+	if encodedHostCertsFromTHIM != "" {
+		_, _, err := encodedUvmInformation.InitialCerts.GetLocalCerts(encodedHostCertsFromTHIM)
+		if err != nil {
+			return encodedUvmInformation, err
+		}
+	}
 
-	// encodedUvmInformation.EncodedSecurityPolicy, err = readSecurityContextFile(securityContextDir, PolicyFilename)
-	// if err != nil {
-	// 	return encodedUvmInformation, errors.Wrapf(err, "reading security policy failed")
-	// }
-	fmt.Println("policy file name ", PolicyFilename)
+	encodedUvmInformation.EncodedSecurityPolicy, err = readSecurityContextFile(securityContextDir, PolicyFilename)
+	if err != nil {
+		return encodedUvmInformation, errors.Wrapf(err, "reading security policy failed")
+	}
+	fmt.Println("policy file is ", encodedUvmInformation.EncodedSecurityPolicy)
 	encodedUvmInformation.EncodedUvmReferenceInfo, err = readSecurityContextFile(securityContextDir, ReferenceInfoFilename)
 	if err != nil {
 		return encodedUvmInformation, errors.Wrapf(err, "reading uvm reference info failed")

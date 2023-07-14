@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: Pod
+metadata:
+ name: testrefinfo
+spec:
+  runtimeClassName: kata-cc
+  containers:
+  - image: docker.io/stevendongatmsft/refinfotest:1
+    imagePullPolicy: Always
+    name: aasp
+    command: [/bin/aasp]
+    env:
+    - name: UVM_SECURITY_CONTEXT_DIR
+      value: "/opt/confidential-containers/share/kata-containers"
+    - name: CertCacheEndpoint
+      value: "ewogICAgImNlcnRjYWNoZSI6IHsKCQkiZW5kcG9pbnRfdHlwZSI6ICJBekNhY2hlIiwKCQkiZW5kcG9pbnQiOiAiYW1lcmljYXMudGVzdC5hY2NjYWNoZS5henVyZS5uZXQiLAoJCSJ0ZWVfdHlwZSI6ICJTZXZTbnBWTSIsCgkJImFwaV92ZXJzaW9uIjogImFwaS12ZXJzaW9uPTIwMjAtMTAtMTUtcHJldmlldyIKCX0gIAp9"
+    volumeMounts:
+    - mountPath: /opt/confidential-containers/share/kata-containers
+      name: uvm-reference-info
+    - mountPath: /common
+      name: common
+    securityContext:
+      privileged: true
+  volumes:
+  - name: uvm-reference-info
+    hostPath:
+      path: /opt/confidential-containers/share/kata-containers
+  - name: common
+    emptyDir: {}
