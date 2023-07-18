@@ -338,13 +338,6 @@ func (akv AKV) ReleaseKey(maaTokenBase64 string, kid string, privateWrappingKey 
 	}
 
 	uri := fmt.Sprintf(AKVReleaseKeyRequestURITemplate, akv.Endpoint, kid, akv.APIVersion)
-	fmt.Println("uri is::: ", uri)
-	fmt.Println("-----")
-	fmt.Println(akv.Endpoint)
-	fmt.Println("-----")
-	fmt.Println(kid)
-	fmt.Println("-----")
-	fmt.Println(akv.APIVersion)
 	httpResponse, err := common.HTTPPRequest("POST", uri, releaseKeyJSONData, akv.BearerToken)
 	if err != nil {
 		return nil, "", errors.Wrapf(err, "AKV post request failed")
